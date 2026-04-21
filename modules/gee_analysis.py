@@ -2,7 +2,7 @@ import ee
 import geopandas as gpd
 from shapely.geometry import mapping
 
-GEE_PROJECT = 'TU-PROYECTO-ID'  # Reemplaza con tu proyecto
+GEE_PROJECT = 'ee-stephaniegeorge'  # Reemplaza con tu proyecto
 
 def initialize_gee():
     try:
