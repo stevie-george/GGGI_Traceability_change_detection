@@ -1,20 +1,37 @@
 import ee
 import geopandas as gpd
 from shapely.geometry import mapping
+import os
+import json
 
-GEE_PROJECT = 'ee-stephaniegeorge'  # Reemplaza con tu proyecto
+GEE_PROJECT = 'ee-stephaniegeorge'
 
 def initialize_gee():
     try:
-        ee.Initialize(project='ee-stephaniegeorge')
+        # Intenta leer credenciales desde Streamlit secrets (nube)
+        import streamlit as st
+        project = st.secrets["gee"]["project"]
+        creds_json = st.secrets["earthengine"]["credentials"]
+
+        creds_path = os.path.expanduser("~/.config/earthengine/credentials")
+        os.makedirs(os.path.dirname(creds_path), exist_ok=True)
+        with open(creds_path, "w") as f:
+            f.write(creds_json)
+
+        ee.Initialize(project=project)
         return True
-    except Exception:
+    except Exception as e1:
+        # Fallback local
         try:
-            ee.Authenticate()
-            ee.Initialize(project='ee-stephaniegeorge')
+            ee.Initialize(project=GEE_PROJECT)
             return True
-        except Exception as e:
-            return False
+        except Exception as e2:
+            try:
+                ee.Authenticate()
+                ee.Initialize(project=GEE_PROJECT)
+                return True
+            except Exception as e3:
+                return False
 
 def polygon_to_ee(polygon):
     return ee.Geometry(mapping(polygon))
