@@ -8,20 +8,22 @@ GEE_PROJECT = 'ee-stephaniegeorge'
 
 def initialize_gee():
     try:
-        # Intenta leer credenciales desde Streamlit secrets (nube)
         import streamlit as st
+        import json
+
         project = st.secrets["gee"]["project"]
         creds_json = st.secrets["earthengine"]["credentials"]
+        service_account = st.secrets["earthengine"]["service_account"]
 
-        creds_path = os.path.expanduser("~/.config/earthengine/credentials")
-        os.makedirs(os.path.dirname(creds_path), exist_ok=True)
-        with open(creds_path, "w") as f:
-            f.write(creds_json)
-
-        ee.Initialize(project=project)
+        credentials = ee.ServiceAccountCredentials(
+            service_account,
+            key_data=creds_json
+        )
+        ee.Initialize(credentials=credentials, project=project)
         return True
+
     except Exception as e1:
-        # Fallback local
+        # Fallback local sin streamlit secrets
         try:
             ee.Initialize(project=GEE_PROJECT)
             return True
@@ -30,9 +32,10 @@ def initialize_gee():
                 ee.Authenticate()
                 ee.Initialize(project=GEE_PROJECT)
                 return True
-            except Exception as e3:
+            except:
                 return False
-
+            
+            
 def polygon_to_ee(polygon):
     return ee.Geometry(mapping(polygon))
 

@@ -10,27 +10,7 @@ from modules.map_viewer import create_alert_map
 from modules.report_generator import generate_pdf, generate_excel
 
 
-# DEBUG - borrar después
-try:
-    import ee, json
-    creds_json = st.secrets["earthengine"]["credentials"]
-    service_account = st.secrets["earthengine"]["service_account"]
-    
-    # Muestra info de las credenciales
-    creds_dict = json.loads(creds_json)
-    st.write(f"Type: {creds_dict.get('type')}")
-    st.write(f"Project: {creds_dict.get('project_id')}")
-    st.write(f"Client email: {creds_dict.get('client_email')}")
-    
-    # Intenta inicializar
-    credentials = ee.ServiceAccountCredentials(service_account, key_data=creds_json)
-    ee.Initialize(credentials=credentials, project="ee-stephaniegeorge")
-    st.success("GEE OK!")
-    
-except Exception as e:
-    st.error(f"Error exacto: {str(e)}")
 
-###
 st.set_page_config(page_title="Alertas Deforestación MX", page_icon="🌿", layout="wide")
 
 st.title("🌿 Sistema de Alertas — Cero Deforestación")
