@@ -12,24 +12,23 @@ from modules.report_generator import generate_pdf, generate_excel
 
 # DEBUG - borrar después
 try:
-    secret_gee = st.secrets["gee"]["project"]
-    st.write(f"Secret GEE project: {secret_gee}")
+    import ee, json
+    creds_json = st.secrets["earthengine"]["credentials"]
+    service_account = st.secrets["earthengine"]["service_account"]
+    
+    # Muestra info de las credenciales
+    creds_dict = json.loads(creds_json)
+    st.write(f"Type: {creds_dict.get('type')}")
+    st.write(f"Project: {creds_dict.get('project_id')}")
+    st.write(f"Client email: {creds_dict.get('client_email')}")
+    
+    # Intenta inicializar
+    credentials = ee.ServiceAccountCredentials(service_account, key_data=creds_json)
+    ee.Initialize(credentials=credentials, project="ee-stephaniegeorge")
+    st.success("GEE OK!")
+    
 except Exception as e:
-    st.error(f"Error leyendo secret gee: {e}")
-
-try:
-    secret_creds = st.secrets["earthengine"]["credentials"]
-    st.write(f"Credenciales encontradas: {len(secret_creds)} caracteres")
-except Exception as e:
-    st.error(f"Error leyendo credentials: {e}")
-
-try:
-    import ee
-    from modules.gee_analysis import initialize_gee
-    result = initialize_gee()
-    st.write(f"GEE init result: {result}")
-except Exception as e:
-    st.error(f"Error en initialize_gee: {e}")
+    st.error(f"Error exacto: {str(e)}")
 
 ###
 st.set_page_config(page_title="Alertas Deforestación MX", page_icon="🌿", layout="wide")
