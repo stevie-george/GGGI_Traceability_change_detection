@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+*.egg-info/
+.ipynb_checkpoints/
+assets/tmp/
+.streamlit/secrets.toml

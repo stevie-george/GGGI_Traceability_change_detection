@@ -1,0 +1,13 @@
+streamlit
+geemap
+earthengine-api
+folium
+streamlit-folium
+geopandas
+shapely
+fiona
+reportlab
+openpyxl
+pandas
+numpy
+matplotlib
