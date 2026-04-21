@@ -50,7 +50,11 @@ with tab1:
         polygon = get_polygon_from_draw(center=[20.0, -102.0], zoom=6)
 
     elif metodo == "Subir archivo":
-        uploaded = st.file_uploader("Sube tu archivo", type=["shp", "geojson", "kml", "zip"])
+        uploaded = st.file_uploader(
+            "Sube tu archivo",
+            type=["zip", "geojson", "kml"],
+            help="Para shapefiles: comprime todos los archivos (.shp, .dbf, .shx, .prj) en un .zip"
+            )
         if uploaded:
             polygon = get_polygon_from_file(uploaded)
             if polygon:

@@ -21,23 +21,43 @@ def get_polygon_from_draw(center=[-23.5, -46.6], zoom=5):
     return polygon
 
 def get_polygon_from_file(uploaded_file):
-    import tempfile, os
+    import tempfile, os, zipfile
     suffix = "." + uploaded_file.name.split(".")[-1].lower()
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as f:
-        f.write(uploaded_file.read())
-        tmp_path = f.name
-    try:
-        if suffix == ".kml":
-            import fiona
-            fiona.drvsupport.supported_drivers["KML"] = "rw"
-            gdf = gpd.read_file(tmp_path, driver="KML")
-        else:
-            gdf = gpd.read_file(tmp_path)
-        gdf = gdf.to_crs("EPSG:4326")
-        polygon = gdf.geometry.unary_union
-        return polygon
-    finally:
-        os.unlink(tmp_path)
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = os.path.join(tmpdir, uploaded_file.name)
+        with open(tmp_path, "wb") as f:
+            f.write(uploaded_file.read())
+        
+        try:
+            # Si es zip, extrae primero
+            if suffix == ".zip":
+                with zipfile.ZipFile(tmp_path, "r") as z:
+                    z.extractall(tmpdir)
+                # Busca el .shp dentro del zip
+                shp_files = [f for f in os.listdir(tmpdir) if f.endswith(".shp")]
+                if shp_files:
+                    tmp_path = os.path.join(tmpdir, shp_files[0])
+                else:
+                    # Puede ser un geojson dentro del zip
+                    geojson_files = [f for f in os.listdir(tmpdir) if f.endswith(".geojson")]
+                    if geojson_files:
+                        tmp_path = os.path.join(tmpdir, geojson_files[0])
+
+            if suffix == ".kml":
+                import fiona
+                fiona.drvsupport.supported_drivers["KML"] = "rw"
+                gdf = gpd.read_file(tmp_path, driver="KML")
+            else:
+                gdf = gpd.read_file(tmp_path)
+
+            gdf = gdf.to_crs("EPSG:4326")
+            polygon = gdf.geometry.unary_union
+            return polygon
+
+        except Exception as e:
+            st.error(f"Error leyendo archivo: {e}")
+            return None
 
 def get_polygon_from_coords(coords_text):
     try:
