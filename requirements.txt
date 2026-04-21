@@ -1,11 +1,12 @@
-streamlit
-geemap
+streamlit==1.56.0
 earthengine-api
+geemap
 folium
 streamlit-folium
 geopandas
 shapely
-fiona
+fiona>=1.9.0
+pyproj
 reportlab
 openpyxl
 pandas
