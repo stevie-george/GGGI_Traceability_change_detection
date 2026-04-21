@@ -9,6 +9,29 @@ from modules.gee_analysis import (initialize_gee, analyze_hansen, analyze_glad,
 from modules.map_viewer import create_alert_map
 from modules.report_generator import generate_pdf, generate_excel
 
+
+# DEBUG - borrar después
+try:
+    secret_gee = st.secrets["gee"]["project"]
+    st.write(f"Secret GEE project: {secret_gee}")
+except Exception as e:
+    st.error(f"Error leyendo secret gee: {e}")
+
+try:
+    secret_creds = st.secrets["earthengine"]["credentials"]
+    st.write(f"Credenciales encontradas: {len(secret_creds)} caracteres")
+except Exception as e:
+    st.error(f"Error leyendo credentials: {e}")
+
+try:
+    import ee
+    from modules.gee_analysis import initialize_gee
+    result = initialize_gee()
+    st.write(f"GEE init result: {result}")
+except Exception as e:
+    st.error(f"Error en initialize_gee: {e}")
+
+###
 st.set_page_config(page_title="Alertas Deforestación MX", page_icon="🌿", layout="wide")
 
 st.title("🌿 Sistema de Alertas — Cero Deforestación")
