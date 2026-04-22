@@ -102,19 +102,28 @@ def create_alert_map(polygon, results=None, center=None):
             add_tile_layer(m, tile_url, LAYER_STYLES["modis"]["name"],
                            LAYER_STYLES["modis"]["color"])
 
-    # Leyenda
     legend_html = """
     <div style="position: fixed; bottom: 30px; left: 30px; z-index: 1000;
-         background: black; padding: 12px 16px; border-radius: 8px;
-         border: 1px solid #ccc; font-size: 12px; line-height: 1.8;">
-        <b>Leyenda</b><br>
-        <span style="color:#27ae60">■</span> Polígono analizado<br>
-        <span style="color:#e74c3c">■</span> Hansen pérdida forestal<br>
-        <span style="color:#e67e22">■</span> GLAD alertas<br>
-        <span style="color:#8e44ad">■</span> JRC deforestación<br>
-        <span style="color:#d35400">■</span> JRC degradación<br>
-        <span style="color:#f39c12">■</span> FIRMS incendios<br>
-        <span style="color:#c0392b">■</span> MODIS área quemada<br>
+         background: rgba(15, 15, 15, 0.85);
+         padding: 14px 18px; border-radius: 10px;
+         border: 1px solid rgba(255,255,255,0.15);
+         font-size: 13px; line-height: 2;
+         font-family: Arial, sans-serif;
+         box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+        <div style="color: #ffffff; font-weight: bold; font-size: 14px;
+                    margin-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.2);
+                    padding-bottom: 4px;">
+            🗺️ Leyenda
+        </div>
+        <div style="color: #ffffff;">
+            <span style="color:#2ecc71; font-size:16px;">■</span>&nbsp; Polígono analizado<br>
+            <span style="color:#ff4d4d; font-size:16px;">■</span>&nbsp; Hansen — pérdida forestal<br>
+            <span style="color:#ff9933; font-size:16px;">■</span>&nbsp; GLAD — alertas<br>
+            <span style="color:#cc66ff; font-size:16px;">■</span>&nbsp; JRC — deforestación<br>
+            <span style="color:#ff6600; font-size:16px;">■</span>&nbsp; JRC — degradación<br>
+            <span style="color:#ffcc00; font-size:16px;">■</span>&nbsp; FIRMS — incendios<br>
+            <span style="color:#ff3333; font-size:16px;">■</span>&nbsp; MODIS — área quemada<br>
+        </div>
     </div>
     """
     m.get_root().html.add_child(folium.Element(legend_html))
