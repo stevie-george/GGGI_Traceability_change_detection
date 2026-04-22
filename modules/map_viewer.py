@@ -105,7 +105,7 @@ def create_alert_map(polygon, results=None, center=None):
     # Leyenda
     legend_html = """
     <div style="position: fixed; bottom: 30px; left: 30px; z-index: 1000;
-         background: white; padding: 12px 16px; border-radius: 8px;
+         background: black; padding: 12px 16px; border-radius: 8px;
          border: 1px solid #ccc; font-size: 12px; line-height: 1.8;">
         <b>Leyenda</b><br>
         <span style="color:#27ae60">■</span> Polígono analizado<br>
