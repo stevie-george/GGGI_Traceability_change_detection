@@ -13,6 +13,14 @@ from modules.report_generator import generate_pdf, generate_excel
 
 st.set_page_config(page_title="Alertas Deforestación MX", page_icon="🌿", layout="wide")
 
+st.markdown("""
+    <style>
+        .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 1rem; padding-right: 1rem; max-width: 100%; }
+        iframe { min-height: 750px !important; }
+    </style>
+""", unsafe_allow_html=True)
+
+
 st.title("🌿 Sistema de Alertas — Cero Deforestación")
 st.markdown("Monitoreo para cultivos de **aguacate** y **agave tequilana** en México")
 
@@ -132,7 +140,7 @@ with tab2:
 
         # Mapa
         m = create_alert_map(polygon, results)
-        st_folium(m, width=None, height=550, returned_objects=[])
+        st_folium(m, width=None, height=750, returned_objects=[], use_container_width=True)
 
         # Gráfica Hansen por año
         if hansen.get("by_year"):
