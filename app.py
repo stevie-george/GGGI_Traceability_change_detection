@@ -16,7 +16,8 @@ st.set_page_config(page_title="Alertas Deforestación MX", page_icon="🌿", lay
 st.markdown("""
     <style>
         .block-container { padding-top: 1rem; padding-bottom: 0rem; padding-left: 1rem; padding-right: 1rem; max-width: 100%; }
-        iframe { min-height: 750px !important; }
+        iframe { min-height: 600px !important; }
+        [data-testid="stIFrame"] { height: 750px !important; }
     </style>
 """, unsafe_allow_html=True)
 

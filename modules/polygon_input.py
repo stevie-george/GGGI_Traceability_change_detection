@@ -13,7 +13,7 @@ def get_polygon_from_draw(center=[-23.5, -46.6], zoom=5):
                       "marker": False, "polyline": False, "circlemarker": False}
     )
     draw.add_to(m)
-    output = st_folium(m, width=700, height=500)
+    output = st_folium(m, width=None, height=600, use_container_width=True)
     polygon = None
     if output and output.get("last_active_drawing"):
         geojson = output["last_active_drawing"]
