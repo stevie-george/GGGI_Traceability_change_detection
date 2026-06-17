@@ -11,20 +11,13 @@ def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
     m = folium.Map(
         location=center,
         zoom_start=zoom,
-        tiles=None  # Sin tiles por defecto, los agregamos manualmente
-    )
-
-    # Google Satellite como basemap
-    folium.TileLayer(
         tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
         attr="Google Satellite",
-        name="Google Satellite",
-        overlay=False,
-        control=True,
-        max_zoom=21
-    ).add_to(m)
+        max_zoom=21,
+        prefer_canvas=True
+    )
 
-    # Google Hybrid (satelite + etiquetas) como opción adicional
+    # Google Hybrid (satelite + etiquetas)
     folium.TileLayer(
         tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
         attr="Google Hybrid",
@@ -34,7 +27,7 @@ def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
         max_zoom=21
     ).add_to(m)
 
-    # OpenStreetMap como opción adicional
+    # OpenStreetMap
     folium.TileLayer(
         tiles="OpenStreetMap",
         name="OpenStreetMap",
@@ -65,6 +58,8 @@ def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
         geojson = output["last_active_drawing"]
         polygon = shape(geojson["geometry"])
     return polygon
+
+
 
 def get_polygon_from_file(uploaded_file):
     import tempfile, os, zipfile
