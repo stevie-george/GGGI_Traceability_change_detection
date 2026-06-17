@@ -5,15 +5,61 @@ from shapely.geometry import shape, Polygon
 from streamlit_folium import st_folium
 import folium
 
-def get_polygon_from_draw(center=[-23.5, -46.6], zoom=5):
-    m = folium.Map(location=center, zoom_start=zoom)
-    draw = folium.plugins.Draw(
-        export=True,
-        draw_options={"polygon": True, "rectangle": True, "circle": False,
-                      "marker": False, "polyline": False, "circlemarker": False}
+def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
+    import folium.plugins as plugins
+
+    m = folium.Map(
+        location=center,
+        zoom_start=zoom,
+        tiles=None  # Sin tiles por defecto, los agregamos manualmente
     )
-    draw.add_to(m)
-    output = st_folium(m, width=None, height=600, use_container_width=True)
+
+    # Google Satellite como basemap
+    folium.TileLayer(
+        tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+        attr="Google Satellite",
+        name="Google Satellite",
+        overlay=False,
+        control=True,
+        max_zoom=21
+    ).add_to(m)
+
+    # Google Hybrid (satelite + etiquetas) como opción adicional
+    folium.TileLayer(
+        tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+        attr="Google Hybrid",
+        name="Google Hybrid",
+        overlay=False,
+        control=True,
+        max_zoom=21
+    ).add_to(m)
+
+    # OpenStreetMap como opción adicional
+    folium.TileLayer(
+        tiles="OpenStreetMap",
+        name="OpenStreetMap",
+        overlay=False,
+        control=True
+    ).add_to(m)
+
+    # Herramientas de dibujo
+    plugins.Draw(
+        export=True,
+        draw_options={
+            "polygon": True,
+            "rectangle": True,
+            "circle": False,
+            "marker": False,
+            "polyline": False,
+            "circlemarker": False
+        },
+        edit_options={"edit": True, "remove": True}
+    ).add_to(m)
+
+    folium.LayerControl(collapsed=False).add_to(m)
+
+    output = st_folium(m, width=None, height=650, use_container_width=True, returned_objects=["last_active_drawing"])
+
     polygon = None
     if output and output.get("last_active_drawing"):
         geojson = output["last_active_drawing"]
