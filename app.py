@@ -16,21 +16,26 @@ st.set_page_config(page_title="Alertas Deforestación MX", page_icon="🌿", lay
 st.markdown("""
     <style>
         .block-container {
-            padding-top: 1rem;
+            padding-top: 0.5rem;
             padding-bottom: 0rem;
-            padding-left: 1rem;
-            padding-right: 1rem;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
             max-width: 100%;
         }
         iframe {
-            min-height: 100% !important;
-            height: 1000px !important;
+            min-height: 82vh !important;
+            height: 82vh !important;
             width: 100% !important;
         }
         .stIFrame { width: 100% !important; }
         [data-testid="stIFrame"] {
-            height: 1000px !important;
+            min-height: 82vh !important;
+            height: 82vh !important;
             width: 100% !important;
+        }
+        [data-testid="stVerticalBlock"] iframe {
+            min-height: 82vh !important;
+            height: 82vh !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -153,7 +158,7 @@ with tab2:
 
         # Mapa fullscreen arriba
         m = create_alert_map(polygon, results)
-        st_folium(m, width=None, height=700, returned_objects=[], use_container_width=True)
+        st_folium(m, width=None, height=800, returned_objects=[], use_container_width=True)
 
         st.divider()
 

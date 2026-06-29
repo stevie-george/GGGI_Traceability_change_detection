@@ -51,7 +51,7 @@ def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
 
     folium.LayerControl(collapsed=False).add_to(m)
 
-    output = st_folium(m, width=None, use_container_height=True, use_container_width=True, returned_objects=["last_active_drawing"])
+    output = st_folium(m, width=None, height=800, use_container_width=True, returned_objects=["last_active_drawing"])
 
     polygon = None
     if output and output.get("last_active_drawing"):
