@@ -22,11 +22,7 @@ st.markdown("""
             padding-right: 0.8rem !important;
             max-width: 100% !important;
         }
-        h3 {
-            font-size: 1.2rem !important;
-            white-space: normal !important;
-            line-height: 1.4 !important;
-        }
+
         iframe[height="1"] {
             display: none !important;
             height: 0 !important;
@@ -35,7 +31,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("### 🌿 Sistema de Alertas — Cero Deforestación")
+st.markdown('<p style="font-size:1.3rem; font-weight:600; margin-bottom:0;">🌿 Sistema de Alertas — Cero Deforestación</p>', unsafe_allow_html=True)
 st.caption("Monitoreo para cultivos de aguacate y agave tequilana en México")
 
 with st.sidebar:
