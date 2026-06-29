@@ -22,12 +22,7 @@ st.markdown("""
             padding-right: 0.5rem !important;
             max-width: 100% !important;
         }
-        h1 { white-space: normal !important; font-size: 1.6rem !important; }
-        /* Elimina espacio extra bajo los iframes */
-        .element-container:has(iframe) {
-            margin-bottom: 0 !important;
-            padding-bottom: 0 !important;
-        }
+        h1 { font-size: 1.4rem !important; white-space: normal !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -104,42 +99,40 @@ with tab1:
                 st.success("Polígono creado ✓")
 
     # Panel de análisis — visible cuando hay polígono
-    if "polygon" in st.session_state:
+   if "polygon" in st.session_state:
         st.divider()
         area = get_polygon_area_ha(st.session_state["polygon"])
         col_a, col_b = st.columns([1, 3])
         with col_a:
             st.metric("Área del polígono", f"{area:,.2f} ha")
         with col_b:
-            st.info("✅ Polígono listo. Haz clic en **Analizar** para iniciar el análisis satelital.")
+            if st.button("🔍 Analizar deforestación", type="primary", use_container_width=True):
+                polygon = st.session_state["polygon"]
+                results = {"area_ha": area}
+                progress = st.progress(0, text="Iniciando análisis...")
 
-        if st.button("🔍 Analizar deforestación", type="primary"):
-            polygon = st.session_state["polygon"]
-            results = {"area_ha": area}
-            progress = st.progress(0, text="Iniciando análisis...")
+                if use_hansen:
+                    progress.progress(15, text="Consultando Hansen...")
+                    results["hansen"] = analyze_hansen(polygon, start_year - 2000, end_year - 2000)
+                if use_glad:
+                    progress.progress(30, text="Consultando GLAD...")
+                    results["glad"] = analyze_glad(polygon)
+                if use_jrc:
+                    progress.progress(50, text="Consultando JRC...")
+                    results["jrc"] = analyze_jrc_deforestation(polygon)
+                if use_firms:
+                    progress.progress(65, text="Consultando FIRMS NASA...")
+                    results["firms"] = analyze_firms(polygon)
+                if use_modis:
+                    progress.progress(80, text="Consultando MODIS Burn Area...")
+                    results["modis"] = analyze_modis_burn(polygon)
+                if use_amazon:
+                    progress.progress(92, text="Consultando JRC Amazon...")
+                    results["amazon"] = analyze_jrc_amazon(polygon)
 
-            if use_hansen:
-                progress.progress(15, text="Consultando Hansen...")
-                results["hansen"] = analyze_hansen(polygon, start_year - 2000, end_year - 2000)
-            if use_glad:
-                progress.progress(30, text="Consultando GLAD...")
-                results["glad"] = analyze_glad(polygon)
-            if use_jrc:
-                progress.progress(50, text="Consultando JRC...")
-                results["jrc"] = analyze_jrc_deforestation(polygon)
-            if use_firms:
-                progress.progress(65, text="Consultando FIRMS NASA...")
-                results["firms"] = analyze_firms(polygon)
-            if use_modis:
-                progress.progress(80, text="Consultando MODIS Burn Area...")
-                results["modis"] = analyze_modis_burn(polygon)
-            if use_amazon:
-                progress.progress(92, text="Consultando JRC Amazon...")
-                results["amazon"] = analyze_jrc_amazon(polygon)
-
-            progress.progress(100, text="¡Análisis completado!")
-            st.session_state["results"] = results
-            st.success("¡Listo! Ve a la pestaña **Mapa de alertas**")
+                progress.progress(100, text="¡Análisis completado!")
+                st.session_state["results"] = results
+                st.success("¡Listo! Ve a la pestaña **Mapa de alertas**")
 
 # ══════════════════════════════════════════════════════════
 # TAB 2 — MAPA DE ALERTAS + DASHBOARD
