@@ -80,11 +80,11 @@ with tab1:
     st.subheader("Ingresa el polígono a analizar")
     metodo = st.radio("Método", ["Dibujar en mapa", "Subir archivo", "Coordenadas manuales"], horizontal=True)
 
-    polygon = None
-
     if metodo == "Dibujar en mapa":
         st.info("Dibuja un polígono usando las herramientas de la izquierda del mapa")
-        polygon = get_polygon_from_draw(center=[20.0, -102.0], zoom=6)
+        polygon_drawn = get_polygon_from_draw(center=[20.0, -102.0], zoom=6)
+        if polygon_drawn:
+            st.session_state["polygon"] = polygon_drawn
 
     elif metodo == "Subir archivo":
         uploaded = st.file_uploader(
@@ -93,24 +93,27 @@ with tab1:
             help="Para shapefiles: comprime todos los archivos (.shp, .dbf, .shx, .prj) en un .zip"
         )
         if uploaded:
-            polygon = get_polygon_from_file(uploaded)
-            if polygon:
+            polygon_file = get_polygon_from_file(uploaded)
+            if polygon_file:
+                st.session_state["polygon"] = polygon_file
                 st.success("Archivo cargado correctamente ✓")
 
     elif metodo == "Coordenadas manuales":
         st.markdown("Ingresa coordenadas en formato `latitud, longitud` (una por línea):")
         coords_text = st.text_area("Coordenadas", placeholder="20.123, -103.456\n20.124, -103.457\n20.120, -103.450", height=150)
         if st.button("Cargar coordenadas") and coords_text:
-            polygon = get_polygon_from_coords(coords_text)
-            if polygon:
+            polygon_coords = get_polygon_from_coords(coords_text)
+            if polygon_coords:
+                st.session_state["polygon"] = polygon_coords
                 st.success("Polígono creado ✓")
 
-    if polygon:
-        st.session_state["polygon"] = polygon
-        area = get_polygon_area_ha(polygon)
+    # Botón de análisis siempre visible si hay polígono en session_state
+    if "polygon" in st.session_state:
+        area = get_polygon_area_ha(st.session_state["polygon"])
         st.metric("Área del polígono", f"{area:,.2f} ha")
 
         if st.button("🔍 Analizar deforestación", type="primary"):
+            polygon = st.session_state["polygon"]
             results = {"area_ha": area}
             progress = st.progress(0, text="Iniciando análisis...")
 
