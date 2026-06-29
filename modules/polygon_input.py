@@ -7,6 +7,7 @@ import folium
 
 def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
     import folium.plugins as plugins
+    import streamlit.components.v1 as components
 
     m = folium.Map(
         location=center,
@@ -17,42 +18,53 @@ def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
         prefer_canvas=True
     )
 
-    # Google Hybrid (satelite + etiquetas)
     folium.TileLayer(
         tiles="https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-        attr="Google Hybrid",
-        name="Google Hybrid",
-        overlay=False,
-        control=True,
-        max_zoom=21
+        attr="Google Hybrid", name="Google Hybrid",
+        overlay=False, control=True, max_zoom=21
     ).add_to(m)
 
-    # OpenStreetMap
     folium.TileLayer(
-        tiles="OpenStreetMap",
-        name="OpenStreetMap",
-        overlay=False,
-        control=True
+        tiles="OpenStreetMap", name="OpenStreetMap",
+        overlay=False, control=True
     ).add_to(m)
 
-    # Herramientas de dibujo
     plugins.Draw(
         export=True,
         draw_options={
-            "polygon": True,
-            "rectangle": True,
-            "circle": False,
-            "marker": False,
-            "polyline": False,
-            "circlemarker": False
+            "polygon": True, "rectangle": True,
+            "circle": False, "marker": False,
+            "polyline": False, "circlemarker": False
         },
         edit_options={"edit": True, "remove": True}
     ).add_to(m)
 
     folium.LayerControl(collapsed=False).add_to(m)
 
-    output = st_folium(m, width=None, height=800, use_container_width=True, returned_objects=["last_active_drawing"])
+    # Renderiza el mapa como HTML a pantalla completa
+    map_html = m._repr_html_()
+    full_html = f"""
+        <html><body style="margin:0;padding:0;">
+        <div id="map" style="width:100%;height:80vh;">{map_html}</div>
+        <div id="coords" style="display:none;"></div>
+        <script>
+            // Captura el último polígono dibujado y lo manda a Streamlit
+            document.addEventListener('DOMContentLoaded', function() {{
+                var mapEl = document.querySelector('.folium-map');
+                if (mapEl && mapEl._leaflet_map) {{
+                    mapEl._leaflet_map.on('draw:created', function(e) {{
+                        var geo = e.layer.toGeoJSON();
+                        window.parent.postMessage({{type:'polygon', data: JSON.stringify(geo)}}, '*');
+                    }});
+                }}
+            }});
+        </script>
+        </body></html>
+    """
+    components.html(full_html, height=int(650), scrolling=False)
 
+    # Para este método usamos st_folium para capturar el polígono
+    output = st_folium(m, width=0, height=0, returned_objects=["last_active_drawing"], key="hidden_map")
     polygon = None
     if output and output.get("last_active_drawing"):
         geojson = output["last_active_drawing"]
