@@ -1,5 +1,7 @@
 import streamlit as st
 from streamlit_folium import st_folium
+import pandas as pd
+import plotly.graph_objects as go
 
 from modules.polygon_input import get_polygon_from_draw, get_polygon_from_file, get_polygon_from_coords
 from modules.gee_analysis import (initialize_gee, analyze_hansen, analyze_glad,
@@ -9,34 +11,29 @@ from modules.gee_analysis import (initialize_gee, analyze_hansen, analyze_glad,
 from modules.map_viewer import create_alert_map
 from modules.report_generator import generate_pdf, generate_excel
 
-
-
 st.set_page_config(page_title="Alertas Deforestación MX", page_icon="🌿", layout="wide")
 
 st.markdown("""
     <style>
-        .block-container { 
-            padding-top: 1rem; 
-            padding-bottom: 0rem; 
-            padding-left: 1rem; 
-            padding-right: 1rem; 
-            max-width: 100%; 
+        .block-container {
+            padding-top: 1rem;
+            padding-bottom: 0rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            max-width: 100%;
         }
-        iframe { 
-            min-height: 100% !important;
-            height: 100% !important;
+        iframe {
+            min-height: 650px !important;
+            height: 650px !important;
             width: 100% !important;
         }
-        .stIFrame {
-            width: 100% !important;
-        }
-        [data-testid="stIFrame"] { 
-            height: 100% !important;
+        .stIFrame { width: 100% !important; }
+        [data-testid="stIFrame"] {
+            height: 650px !important;
             width: 100% !important;
         }
     </style>
 """, unsafe_allow_html=True)
-
 
 st.title("🌿 Sistema de Alertas — Cero Deforestación")
 st.markdown("Monitoreo para cultivos de **aguacate** y **agave tequilana** en México")
@@ -64,13 +61,16 @@ with st.sidebar:
 
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📍 Polígono",
-    "🗺️ Mapa de alertas", 
+    "🗺️ Mapa de alertas",
     "📄 Reporte",
     "⚙️ Credenciales GEE",
     "🗂️ Fuentes de datos",
     "✅ Validación"
 ])
 
+# ══════════════════════════════════════════════════════════
+# TAB 1 — POLÍGONO
+# ══════════════════════════════════════════════════════════
 with tab1:
     st.subheader("Ingresa el polígono a analizar")
     metodo = st.radio("Método", ["Dibujar en mapa", "Subir archivo", "Coordenadas manuales"], horizontal=True)
@@ -86,7 +86,7 @@ with tab1:
             "Sube tu archivo",
             type=["zip", "geojson", "kml"],
             help="Para shapefiles: comprime todos los archivos (.shp, .dbf, .shx, .prj) en un .zip"
-            )
+        )
         if uploaded:
             polygon = get_polygon_from_file(uploaded)
             if polygon:
@@ -137,59 +137,158 @@ with tab1:
             st.session_state["results"] = results
             st.success("¡Listo! Ve a la pestaña 'Mapa de alertas'")
 
+# ══════════════════════════════════════════════════════════
+# TAB 2 — MAPA DE ALERTAS + DASHBOARD
+# ══════════════════════════════════════════════════════════
 with tab2:
-    st.subheader("Mapa de alertas")
     if "results" in st.session_state and "polygon" in st.session_state:
-        results  = st.session_state["results"]
-        polygon  = st.session_state["polygon"]
-        hansen   = results.get("hansen", {})
-        glad     = results.get("glad", {})
-        jrc      = results.get("jrc", {})
-        firms    = results.get("firms", {})
-        modis    = results.get("modis", {})
-        amazon   = results.get("amazon", {})
+        results = st.session_state["results"]
+        polygon = st.session_state["polygon"]
+        hansen  = results.get("hansen", {})
+        glad    = results.get("glad", {})
+        jrc     = results.get("jrc", {})
+        firms   = results.get("firms", {})
+        modis   = results.get("modis", {})
+        amazon  = results.get("amazon", {})
+
+        # Mapa fullscreen arriba
+        m = create_alert_map(polygon, results)
+        st_folium(m, width=None, height=700, returned_objects=[], use_container_width=True)
+
+        st.divider()
 
         # Métricas
+        st.markdown("### 📊 Resumen de alertas")
         col1, col2, col3, col4, col5 = st.columns(5)
-        col1.metric("Área polígono",       f"{results['area_ha']:,.2f} ha")
-        col2.metric("Hansen pérdida",      f"{hansen.get('total_loss_ha', 0):,.2f} ha")
-        col3.metric("JRC deforestación",   f"{jrc.get('deforestation_ha', 0):,.2f} ha")
-        col4.metric("JRC degradación",     f"{jrc.get('degradation_ha', 0):,.2f} ha")
-        col5.metric("FIRMS incendios",     f"{firms.get('fire_area_ha', 0):,.2f} ha")
+        col1.metric("Área polígono",     f"{results['area_ha']:,.2f} ha")
+        col2.metric("Hansen pérdida",    f"{hansen.get('total_loss_ha', 0):,.2f} ha")
+        col3.metric("JRC deforestación", f"{jrc.get('deforestation_ha', 0):,.2f} ha")
+        col4.metric("JRC degradación",   f"{jrc.get('degradation_ha', 0):,.2f} ha")
+        col5.metric("Hansen ganancia",   f"{hansen.get('gain_ha', 0):,.2f} ha")
 
-        col6, col7, col8 = st.columns(3)
-        col6.metric("GLAD alertas",        f"{glad.get('alert_area_ha', 0):,.2f} ha")
-        col7.metric("MODIS área quemada",  f"{modis.get('burn_area_ha', 0):,.2f} ha")
-        col8.metric("Hansen ganancia",     f"{hansen.get('gain_ha', 0):,.2f} ha")
+        col6, col7, col8, col9 = st.columns(4)
+        col6.metric("GLAD alertas",    f"{glad.get('alert_area_ha', 0):,.2f} ha")
+        col7.metric("FIRMS incendios", f"{firms.get('fire_area_ha', 0):,.2f} ha")
+        col8.metric("MODIS quemado",   f"{modis.get('burn_area_ha', 0):,.2f} ha")
+        col9.metric("JRC regrowth",    f"{jrc.get('regrowth_ha', 0):,.2f} ha")
 
-        # Mapa
-        m = create_alert_map(polygon, results)
-        st_folium(m, width=None, height=750, returned_objects=[], use_container_width=True)
+        st.divider()
 
-        # Gráfica Hansen por año
-        if hansen.get("by_year"):
-            import pandas as pd
-            st.subheader("Pérdida forestal anual (Hansen)")
-            df = pd.DataFrame(hansen["by_year"])
-            df.columns = ["Año", "Área perdida (ha)"]
-            st.bar_chart(df.set_index("Año"))
+        # Gráficas
+        col_left, col_right = st.columns(2)
 
-        # JRC Amazon detalle
+        # Gráfica 1 — Pérdidas y ganancias forestales
+        with col_left:
+            st.markdown("### 🌳 Pérdidas y ganancias forestales")
+            hansen_by_year = {r["year"]: r["area_ha"] for r in hansen.get("by_year", [])}
+            jrc_defor      = {r["year"]: r["area_ha"] for r in jrc.get("by_year_defor", [])}
+            jrc_regrowth   = {r["year"]: r["area_ha"] for r in jrc.get("by_year_regrowth", [])}
+
+            all_years = sorted(set(
+                list(hansen_by_year.keys()) +
+                list(jrc_defor.keys()) +
+                list(jrc_regrowth.keys())
+            ))
+
+            if all_years:
+                fig1 = go.Figure()
+                fig1.add_trace(go.Scatter(
+                    x=all_years,
+                    y=[hansen_by_year.get(y, 0) for y in all_years],
+                    name="Hansen — pérdida",
+                    line=dict(color="#ff4d4d", width=2),
+                    marker=dict(size=6)
+                ))
+                fig1.add_trace(go.Scatter(
+                    x=all_years,
+                    y=[jrc_defor.get(y, 0) for y in all_years],
+                    name="JRC — deforestación",
+                    line=dict(color="#cc66ff", width=2),
+                    marker=dict(size=6)
+                ))
+                fig1.add_trace(go.Scatter(
+                    x=all_years,
+                    y=[jrc_regrowth.get(y, 0) for y in all_years],
+                    name="JRC — regrowth",
+                    line=dict(color="#2ecc71", width=2, dash="dash"),
+                    marker=dict(size=6)
+                ))
+                fig1.update_layout(
+                    xaxis_title="Año",
+                    yaxis_title="Área (ha)",
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                    height=350,
+                    margin=dict(l=20, r=20, t=40, b=20),
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="white")
+                )
+                st.plotly_chart(fig1, use_container_width=True)
+            else:
+                st.info("Sin datos anuales disponibles para esta área.")
+
+        # Gráfica 2 — Incendios
+        with col_right:
+            st.markdown("### 🔥 Incendios y área quemada")
+            firms_by_year = {r["year"]: r["area_ha"] for r in firms.get("by_year", [])}
+            modis_by_year = {r["year"]: r["area_ha"] for r in modis.get("by_year", [])}
+
+            all_years_fire = sorted(set(
+                list(firms_by_year.keys()) +
+                list(modis_by_year.keys())
+            ))
+
+            if all_years_fire:
+                fig2 = go.Figure()
+                fig2.add_trace(go.Bar(
+                    x=all_years_fire,
+                    y=[firms_by_year.get(y, 0) for y in all_years_fire],
+                    name="FIRMS — incendios",
+                    marker_color="#ffcc00",
+                    opacity=0.85
+                ))
+                fig2.add_trace(go.Bar(
+                    x=all_years_fire,
+                    y=[modis_by_year.get(y, 0) for y in all_years_fire],
+                    name="MODIS — área quemada",
+                    marker_color="#ff3333",
+                    opacity=0.85
+                ))
+                fig2.update_layout(
+                    barmode="group",
+                    xaxis_title="Año",
+                    yaxis_title="Área (ha)",
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                    height=350,
+                    margin=dict(l=20, r=20, t=40, b=20),
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="white")
+                )
+                st.plotly_chart(fig2, use_container_width=True)
+            else:
+                st.info("Sin datos de incendios disponibles para esta área.")
+
+        # JRC Amazon
         if amazon:
-            st.subheader("Cobertura forestal JRC Amazon")
+            st.divider()
+            st.markdown("### 🌎 Cobertura forestal JRC Amazon")
             col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Bosque intacto",   f"{amazon.get('undisturbed_ha', 0):,.2f} ha")
-            col2.metric("Degradado",        f"{amazon.get('degraded_ha', 0):,.2f} ha")
-            col3.metric("Deforestado",      f"{amazon.get('deforested_ha', 0):,.2f} ha")
-            col4.metric("Regeneración",     f"{amazon.get('regrowth_ha', 0):,.2f} ha")
+            col1.metric("Bosque intacto", f"{amazon.get('undisturbed_ha', 0):,.2f} ha")
+            col2.metric("Degradado",      f"{amazon.get('degraded_ha', 0):,.2f} ha")
+            col3.metric("Deforestado",    f"{amazon.get('deforested_ha', 0):,.2f} ha")
+            col4.metric("Regeneración",   f"{amazon.get('regrowth_ha', 0):,.2f} ha")
 
-        # Notas de fuentes con errores
+        # Warnings
         for source, data in [("GLAD", glad), ("JRC", jrc), ("FIRMS", firms), ("MODIS", modis)]:
             if data.get("note"):
                 st.warning(f"⚠️ {source}: {data['note']}")
     else:
         st.info("Primero ingresa y analiza un polígono en la pestaña 'Polígono'")
 
+# ══════════════════════════════════════════════════════════
+# TAB 3 — REPORTE
+# ══════════════════════════════════════════════════════════
 with tab3:
     st.subheader("Generar reporte")
     if "results" in st.session_state and "polygon" in st.session_state:
@@ -213,24 +312,28 @@ with tab3:
                 st.download_button("⬇️ Descargar Excel", excel,
                                    "reporte_deforestacion.xlsx",
                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                
+    else:
+        st.info("Primero ingresa y analiza un polígono en la pestaña 'Polígono'")
 
+# ══════════════════════════════════════════════════════════
+# TAB 4 — CREDENCIALES GEE
+# ══════════════════════════════════════════════════════════
 with tab4:
     st.subheader("⚙️ Configuración de credenciales GEE por estado")
     st.info("Esta sección permite configurar cuentas de Google Earth Engine independientes para cada estado de la República Mexicana.")
-    
+
     st.markdown("### Estado actual de conexión")
     col1, col2 = st.columns(2)
     with col1:
         st.metric("Proyecto GEE activo", "ee-stephaniegeorge")
-        st.metric("Estado de conexión", "Conectado ✓" if initialize_gee() else "Desconectado ✗")
+        st.metric("Estado de conexión", "Conectado ✓" if gee_ok else "Desconectado ✗")
     with col2:
         st.metric("Service Account", "gee-streamlit@ee-stephaniegeorge")
         st.metric("Tier", "Contributor")
 
     st.divider()
     st.markdown("### Agregar credenciales por estado")
-    
+
     estados = [
         "Jalisco", "Michoacán", "Nayarit", "Colima", "Aguascalientes",
         "Zacatecas", "Guanajuato", "Querétaro", "Estado de México",
@@ -243,11 +346,14 @@ with tab4:
 
     col1, col2 = st.columns(2)
     with col1:
-        estado_sel = st.selectbox("Estado", estados)
-        proyecto_id = st.text_input("Project ID de GEE", placeholder="ee-nombre-proyecto")
-        service_account = st.text_input("Service Account email", placeholder="nombre@proyecto.iam.gserviceaccount.com")
+        estado_sel    = st.selectbox("Estado", estados)
+        proyecto_id   = st.text_input("Project ID de GEE", placeholder="ee-nombre-proyecto")
+        svc_account   = st.text_input("Service Account email", placeholder="nombre@proyecto.iam.gserviceaccount.com")
     with col2:
-        credentials_json = st.text_area("Credenciales JSON (Service Account Key)", height=150, placeholder='{\n  "type": "service_account",\n  "project_id": "...",\n  ...\n}')
+        credentials_json = st.text_area(
+            "Credenciales JSON (Service Account Key)", height=150,
+            placeholder='{\n  "type": "service_account",\n  "project_id": "...",\n  ...\n}'
+        )
 
     st.button("💾 Guardar credenciales", disabled=True)
     st.caption("⚠️ Funcionalidad en desarrollo — disponible en v2.0")
@@ -255,53 +361,52 @@ with tab4:
     st.divider()
     st.markdown("### Credenciales configuradas por estado")
     st.dataframe({
-        "Estado": ["—"],
-        "Proyecto GEE": ["—"],
+        "Estado":          ["—"],
+        "Proyecto GEE":    ["—"],
         "Service Account": ["—"],
-        "Estado": ["Sin configurar"],
+        "Estatus":         ["Sin configurar"],
     }, use_container_width=True)
 
-
+# ══════════════════════════════════════════════════════════
+# TAB 5 — FUENTES DE DATOS
+# ══════════════════════════════════════════════════════════
 with tab5:
     st.subheader("🗂️ Fuentes de datos y capas adicionales")
     st.info("Esta sección permitirá incorporar nuevas fuentes de datos satelitales y capas de uso de suelo para enriquecer el análisis.")
 
     st.markdown("### Fuentes de deforestación activas")
     st.dataframe({
-        "Fuente": ["Hansen GFC", "GLAD Alerts", "JRC TMF", "FIRMS NASA", "MODIS MCD64A1"],
-        "Tipo": ["Pérdida forestal", "Alertas", "Deforestación/Degradación", "Incendios activos", "Área quemada"],
-        "Resolución": ["30m", "10m", "30m", "1km", "500m"],
-        "Cobertura temporal": ["2000–2024", "2019–presente", "1990–2023", "2000–presente", "2000–presente"],
-        "Estado": ["✅ Activa", "✅ Activa", "✅ Activa", "✅ Activa", "✅ Activa"],
+        "Fuente":            ["Hansen GFC", "GLAD Alerts", "JRC TMF", "FIRMS NASA", "MODIS MCD64A1"],
+        "Tipo":              ["Pérdida forestal", "Alertas", "Deforestación/Degradación", "Incendios activos", "Área quemada"],
+        "Resolución":        ["30m", "10m", "30m", "1km", "500m"],
+        "Cobertura temporal":["2000–2024", "2019–presente", "1990–2023", "2000–presente", "2000–presente"],
+        "Estado":            ["✅ Activa", "✅ Activa", "✅ Activa", "✅ Activa", "✅ Activa"],
     }, use_container_width=True)
 
     st.divider()
     st.markdown("### Capas de uso de suelo (próximamente)")
-    
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("#### 🌱 Capas en desarrollo")
-        capas_desarrollo = [
-            ("SIAP — Superficie agrícola por cultivo", "En desarrollo"),
-            ("INEGI Serie VII — Uso de suelo y vegetación", "En desarrollo"),
-            ("MapBiomas México — Clasificación anual", "En desarrollo"),
-            ("NALCMS — North American Land Change", "En desarrollo"),
-            ("RAN — Registro Agrario Nacional (parcelas)", "En desarrollo"),
-        ]
-        for nombre, estado in capas_desarrollo:
-            st.markdown(f"🔲 **{nombre}** — *{estado}*")
+        for nombre in [
+            "SIAP — Superficie agrícola por cultivo",
+            "INEGI Serie VII — Uso de suelo y vegetación",
+            "MapBiomas México — Clasificación anual",
+            "NALCMS — North American Land Change",
+            "RAN — Registro Agrario Nacional (parcelas)",
+        ]:
+            st.markdown(f"🔲 **{nombre}** — *En desarrollo*")
 
     with col2:
         st.markdown("#### 🔥 Capas de riesgo adicionales")
-        capas_riesgo = [
-            ("CONABIO — Áreas Naturales Protegidas", "En desarrollo"),
-            ("CONAFOR — Inventario Nacional Forestal", "En desarrollo"),
-            ("CONANP — Regiones Prioritarias", "En desarrollo"),
-            ("Global Forest Watch — Integridad forestal", "En desarrollo"),
-            ("WWF — Ecorregiones terrestres", "En desarrollo"),
-        ]
-        for nombre, estado in capas_riesgo:
-            st.markdown(f"🔲 **{nombre}** — *{estado}*")
+        for nombre in [
+            "CONABIO — Áreas Naturales Protegidas",
+            "CONAFOR — Inventario Nacional Forestal",
+            "CONANP — Regiones Prioritarias",
+            "Global Forest Watch — Integridad forestal",
+            "WWF — Ecorregiones terrestres",
+        ]:
+            st.markdown(f"🔲 **{nombre}** — *En desarrollo*")
 
     st.divider()
     st.markdown("### Agregar nueva fuente de datos")
@@ -314,11 +419,13 @@ with tab5:
         st.text_input("Banda principal", placeholder="Ej. landcover")
         st.text_input("Descripción", placeholder="Breve descripción de la fuente")
         st.color_picker("Color en mapa", "#FF5733")
-    
+
     st.button("➕ Agregar fuente", disabled=True)
     st.caption("⚠️ Funcionalidad en desarrollo — disponible en v2.0")
 
-
+# ══════════════════════════════════════════════════════════
+# TAB 6 — VALIDACIÓN
+# ══════════════════════════════════════════════════════════
 with tab6:
     st.subheader("✅ Validación y precisión del sistema")
     st.info("Esta sección reportará las métricas de precisión del sistema de detección de deforestación, siguiendo el marco metodológico de Olofsson et al. (2014).")
@@ -326,20 +433,19 @@ with tab6:
     st.markdown("### Marco metodológico")
     col1, col2, col3 = st.columns(3)
     col1.metric("Marco de referencia", "Olofsson et al. 2014")
-    col2.metric("Método de muestreo", "Estratificado aleatorio")
-    col3.metric("Unidad de validación", "Puntos de referencia")
+    col2.metric("Método de muestreo",  "Estratificado aleatorio")
+    col3.metric("Unidad de validación","Puntos de referencia")
 
     st.divider()
     st.markdown("### Métricas de precisión por fuente (pendiente)")
-    
     st.dataframe({
-        "Fuente": ["Hansen GFC", "GLAD Alerts", "JRC TMF", "FIRMS NASA", "MODIS MCD64A1"],
-        "Precisión global (OA)": ["—", "—", "—", "—", "—"],
-        "Precisión productor (PA)": ["—", "—", "—", "—", "—"],
-        "Precisión usuario (UA)": ["—", "—", "—", "—", "—"],
-        "F1-Score": ["—", "—", "—", "—", "—"],
-        "N puntos validados": ["0", "0", "0", "0", "0"],
-        "Última actualización": ["Pendiente", "Pendiente", "Pendiente", "Pendiente", "Pendiente"],
+        "Fuente":                    ["Hansen GFC", "GLAD Alerts", "JRC TMF", "FIRMS NASA", "MODIS MCD64A1"],
+        "Precisión global (OA)":     ["—", "—", "—", "—", "—"],
+        "Precisión productor (PA)":  ["—", "—", "—", "—", "—"],
+        "Precisión usuario (UA)":    ["—", "—", "—", "—", "—"],
+        "F1-Score":                  ["—", "—", "—", "—", "—"],
+        "N puntos validados":        ["0", "0", "0", "0", "0"],
+        "Última actualización":      ["Pendiente"] * 5,
     }, use_container_width=True)
 
     st.divider()
@@ -352,9 +458,9 @@ with tab6:
     with col2:
         st.markdown("#### Matriz de confusión (vacía)")
         st.dataframe({
-            "": ["Deforestación (ref.)", "No deforestación (ref.)"],
-            "Deforestación (pred.)": ["—", "—"],
-            "No deforestación (pred.)": ["—", "—"],
+            "":                          ["Deforestación (ref.)", "No deforestación (ref.)"],
+            "Deforestación (pred.)":     ["—", "—"],
+            "No deforestación (pred.)":  ["—", "—"],
         }, use_container_width=True)
 
     st.divider()
@@ -364,9 +470,6 @@ with tab6:
         st.file_uploader("Subir puntos de validación (CSV/GeoJSON)", type=["csv", "geojson"], disabled=True)
     with col2:
         st.file_uploader("Subir matriz de confusión (Excel)", type=["xlsx"], disabled=True)
-    
+
     st.button("📊 Calcular métricas", disabled=True)
     st.caption("⚠️ Funcionalidad en desarrollo — disponible en v2.0")
-    
-    else:
-        st.info("Primero ingresa y analiza un polígono en la pestaña 'Polígono'")
