@@ -22,7 +22,11 @@ st.markdown("""
             padding-right: 0.8rem !important;
             max-width: 100% !important;
         }
-        /* Oculta el st_folium fantasma de captura */
+        h3 {
+            font-size: 1.2rem !important;
+            white-space: normal !important;
+            line-height: 1.4 !important;
+        }
         iframe[height="1"] {
             display: none !important;
             height: 0 !important;
@@ -31,7 +35,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("## 🌿 Sistema de Alertas — Cero Deforestación")
+st.markdown("### 🌿 Sistema de Alertas — Cero Deforestación")
 st.caption("Monitoreo para cultivos de aguacate y agave tequilana en México")
 
 with st.sidebar:
@@ -104,11 +108,10 @@ with tab1:
     if "polygon" in st.session_state:
         st.divider()
         area = get_polygon_area_ha(st.session_state["polygon"])
-        col_a, col_b, col_c = st.columns([1, 1, 2])
+        col_a, col_b = st.columns([1, 3])
         with col_a:
             st.metric("Área", f"{area:,.2f} ha")
-        with col_b:
-            if st.button("🔍 Analizar deforestación", type="primary"):
+            if st.button("🔍 Analizar", type="primary"):
                 polygon = st.session_state["polygon"]
                 results = {"area_ha": area}
                 progress = st.progress(0, text="Iniciando análisis...")
