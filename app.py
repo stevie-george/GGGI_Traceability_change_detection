@@ -15,38 +15,24 @@ st.set_page_config(page_title="Alertas Deforestación MX", page_icon="🌿", lay
 
 st.markdown("""
     <style>
-        /* Quita padding del contenedor principal */
         .block-container {
-            padding-top: 1rem !important;
+            padding-top: 0.5rem !important;
             padding-bottom: 0rem !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
             max-width: 100% !important;
         }
-        /* Fuerza el iframe a ocupar todo el espacio disponible */
-        .stIFrame > iframe,
-        iframe {
-            width: 100% !important;
-            min-height: 75vh !important;
-            height: 75vh !important;
+        h1 { white-space: normal !important; font-size: 1.6rem !important; }
+        /* Elimina espacio extra bajo los iframes */
+        .element-container:has(iframe) {
+            margin-bottom: 0 !important;
+            padding-bottom: 0 !important;
         }
-        /* Evita que el titulo se corte */
-        h1 { white-space: normal !important; }
     </style>
-    <script>
-        // Fuerza resize de iframes cada segundo
-        setInterval(function() {
-            var iframes = document.querySelectorAll('iframe');
-            iframes.forEach(function(f) {
-                f.style.height = Math.floor(window.innerHeight * 0.75) + 'px';
-                f.style.minHeight = Math.floor(window.innerHeight * 0.75) + 'px';
-            });
-        }, 1000);
-    </script>
 """, unsafe_allow_html=True)
 
 st.title("🌿 Sistema de Alertas — Cero Deforestación")
-st.markdown("Monitoreo para cultivos de **aguacate** y **agave tequilana** en México")
+st.caption("Monitoreo para cultivos de **aguacate** y **agave tequilana** en México")
 
 with st.sidebar:
     st.header("⚙️ Configuración")
@@ -82,12 +68,12 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 # TAB 1 — POLÍGONO
 # ══════════════════════════════════════════════════════════
 with tab1:
-    metodo = st.radio("Método de ingreso", 
-                      ["Dibujar en mapa", "Subir archivo", "Coordenadas manuales"], 
+    metodo = st.radio("Método de ingreso",
+                      ["Dibujar en mapa", "Subir archivo", "Coordenadas manuales"],
                       horizontal=True)
 
     if metodo == "Dibujar en mapa":
-        # Mapa de dibujo
+        st.caption("Usa las herramientas de la izquierda del mapa para dibujar. Puedes usar el botón ⛶ para pantalla completa.")
         polygon_drawn = get_polygon_from_draw(center=[20.0, -102.0], zoom=6)
         if polygon_drawn:
             st.session_state["polygon"] = polygon_drawn
@@ -117,7 +103,7 @@ with tab1:
                 st.session_state["polygon"] = polygon_coords
                 st.success("Polígono creado ✓")
 
-    # Panel de análisis — siempre visible si hay polígono
+    # Panel de análisis — visible cuando hay polígono
     if "polygon" in st.session_state:
         st.divider()
         area = get_polygon_area_ha(st.session_state["polygon"])
@@ -127,35 +113,33 @@ with tab1:
         with col_b:
             st.info("✅ Polígono listo. Haz clic en **Analizar** para iniciar el análisis satelital.")
 
-        col_btn, _ = st.columns([1, 3])
-        with col_btn:
-            if st.button("🔍 Analizar deforestación", type="primary"):
-                polygon = st.session_state["polygon"]
-                results = {"area_ha": area}
-                progress = st.progress(0, text="Iniciando análisis...")
+        if st.button("🔍 Analizar deforestación", type="primary"):
+            polygon = st.session_state["polygon"]
+            results = {"area_ha": area}
+            progress = st.progress(0, text="Iniciando análisis...")
 
-                if use_hansen:
-                    progress.progress(15, text="Consultando Hansen...")
-                    results["hansen"] = analyze_hansen(polygon, start_year - 2000, end_year - 2000)
-                if use_glad:
-                    progress.progress(30, text="Consultando GLAD...")
-                    results["glad"] = analyze_glad(polygon)
-                if use_jrc:
-                    progress.progress(50, text="Consultando JRC...")
-                    results["jrc"] = analyze_jrc_deforestation(polygon)
-                if use_firms:
-                    progress.progress(65, text="Consultando FIRMS NASA...")
-                    results["firms"] = analyze_firms(polygon)
-                if use_modis:
-                    progress.progress(80, text="Consultando MODIS Burn Area...")
-                    results["modis"] = analyze_modis_burn(polygon)
-                if use_amazon:
-                    progress.progress(92, text="Consultando JRC Amazon...")
-                    results["amazon"] = analyze_jrc_amazon(polygon)
+            if use_hansen:
+                progress.progress(15, text="Consultando Hansen...")
+                results["hansen"] = analyze_hansen(polygon, start_year - 2000, end_year - 2000)
+            if use_glad:
+                progress.progress(30, text="Consultando GLAD...")
+                results["glad"] = analyze_glad(polygon)
+            if use_jrc:
+                progress.progress(50, text="Consultando JRC...")
+                results["jrc"] = analyze_jrc_deforestation(polygon)
+            if use_firms:
+                progress.progress(65, text="Consultando FIRMS NASA...")
+                results["firms"] = analyze_firms(polygon)
+            if use_modis:
+                progress.progress(80, text="Consultando MODIS Burn Area...")
+                results["modis"] = analyze_modis_burn(polygon)
+            if use_amazon:
+                progress.progress(92, text="Consultando JRC Amazon...")
+                results["amazon"] = analyze_jrc_amazon(polygon)
 
-                progress.progress(100, text="¡Análisis completado!")
-                st.session_state["results"] = results
-                st.success("¡Listo! Ve a la pestaña **Mapa de alertas**")
+            progress.progress(100, text="¡Análisis completado!")
+            st.session_state["results"] = results
+            st.success("¡Listo! Ve a la pestaña **Mapa de alertas**")
 
 # ══════════════════════════════════════════════════════════
 # TAB 2 — MAPA DE ALERTAS + DASHBOARD
@@ -173,8 +157,7 @@ with tab2:
 
         # Mapa grande
         m = create_alert_map(polygon, results)
-        map_height = 750
-        st_folium(m, width=None, height=map_height,
+        st_folium(m, width=None, height=650,
                   returned_objects=[], use_container_width=True)
 
         st.divider()
