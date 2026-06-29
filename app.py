@@ -107,7 +107,7 @@ with tab1:
                 st.session_state["polygon"] = polygon_coords
                 st.success("Polígono creado ✓")
 
-    # Botón de análisis siempre visible si hay polígono en session_state
+    # Botón siempre visible si hay polígono en session_state
     if "polygon" in st.session_state:
         area = get_polygon_area_ha(st.session_state["polygon"])
         st.metric("Área del polígono", f"{area:,.2f} ha")
@@ -120,23 +120,18 @@ with tab1:
             if use_hansen:
                 progress.progress(15, text="Consultando Hansen...")
                 results["hansen"] = analyze_hansen(polygon, start_year - 2000, end_year - 2000)
-
             if use_glad:
                 progress.progress(30, text="Consultando GLAD...")
                 results["glad"] = analyze_glad(polygon)
-
             if use_jrc:
                 progress.progress(50, text="Consultando JRC...")
                 results["jrc"] = analyze_jrc_deforestation(polygon)
-
             if use_firms:
                 progress.progress(65, text="Consultando FIRMS NASA...")
                 results["firms"] = analyze_firms(polygon)
-
             if use_modis:
                 progress.progress(80, text="Consultando MODIS Burn Area...")
                 results["modis"] = analyze_modis_burn(polygon)
-
             if use_amazon:
                 progress.progress(92, text="Consultando JRC Amazon...")
                 results["amazon"] = analyze_jrc_amazon(polygon)
@@ -159,7 +154,7 @@ with tab2:
         modis   = results.get("modis", {})
         amazon  = results.get("amazon", {})
 
-        # Mapa fullscreen arriba
+        # Mapa grande arriba
         m = create_alert_map(polygon, results)
         st_folium(m, width=None, height=800, returned_objects=[], use_container_width=True)
 
@@ -182,95 +177,67 @@ with tab2:
 
         st.divider()
 
-        # Gráficas
+        # Gráficas lado a lado
         col_left, col_right = st.columns(2)
 
-        # Gráfica 1 — Pérdidas y ganancias forestales
         with col_left:
             st.markdown("### 🌳 Pérdidas y ganancias forestales")
             hansen_by_year = {r["year"]: r["area_ha"] for r in hansen.get("by_year", [])}
             jrc_defor      = {r["year"]: r["area_ha"] for r in jrc.get("by_year_defor", [])}
             jrc_regrowth   = {r["year"]: r["area_ha"] for r in jrc.get("by_year_regrowth", [])}
-
             all_years = sorted(set(
                 list(hansen_by_year.keys()) +
                 list(jrc_defor.keys()) +
                 list(jrc_regrowth.keys())
             ))
-
             if all_years:
                 fig1 = go.Figure()
                 fig1.add_trace(go.Scatter(
-                    x=all_years,
-                    y=[hansen_by_year.get(y, 0) for y in all_years],
-                    name="Hansen — pérdida",
-                    line=dict(color="#ff4d4d", width=2),
-                    marker=dict(size=6)
+                    x=all_years, y=[hansen_by_year.get(y, 0) for y in all_years],
+                    name="Hansen — pérdida", line=dict(color="#ff4d4d", width=2), marker=dict(size=6)
                 ))
                 fig1.add_trace(go.Scatter(
-                    x=all_years,
-                    y=[jrc_defor.get(y, 0) for y in all_years],
-                    name="JRC — deforestación",
-                    line=dict(color="#cc66ff", width=2),
-                    marker=dict(size=6)
+                    x=all_years, y=[jrc_defor.get(y, 0) for y in all_years],
+                    name="JRC — deforestación", line=dict(color="#cc66ff", width=2), marker=dict(size=6)
                 ))
                 fig1.add_trace(go.Scatter(
-                    x=all_years,
-                    y=[jrc_regrowth.get(y, 0) for y in all_years],
-                    name="JRC — regrowth",
-                    line=dict(color="#2ecc71", width=2, dash="dash"),
-                    marker=dict(size=6)
+                    x=all_years, y=[jrc_regrowth.get(y, 0) for y in all_years],
+                    name="JRC — regrowth", line=dict(color="#2ecc71", width=2, dash="dash"), marker=dict(size=6)
                 ))
                 fig1.update_layout(
-                    xaxis_title="Año",
-                    yaxis_title="Área (ha)",
+                    xaxis_title="Año", yaxis_title="Área (ha)",
                     legend=dict(orientation="h", yanchor="bottom", y=1.02),
-                    height=350,
-                    margin=dict(l=20, r=20, t=40, b=20),
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    paper_bgcolor="rgba(0,0,0,0)",
+                    height=350, margin=dict(l=20, r=20, t=40, b=20),
+                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="white")
                 )
                 st.plotly_chart(fig1, use_container_width=True)
             else:
                 st.info("Sin datos anuales disponibles para esta área.")
 
-        # Gráfica 2 — Incendios
         with col_right:
             st.markdown("### 🔥 Incendios y área quemada")
             firms_by_year = {r["year"]: r["area_ha"] for r in firms.get("by_year", [])}
             modis_by_year = {r["year"]: r["area_ha"] for r in modis.get("by_year", [])}
-
             all_years_fire = sorted(set(
                 list(firms_by_year.keys()) +
                 list(modis_by_year.keys())
             ))
-
             if all_years_fire:
                 fig2 = go.Figure()
                 fig2.add_trace(go.Bar(
-                    x=all_years_fire,
-                    y=[firms_by_year.get(y, 0) for y in all_years_fire],
-                    name="FIRMS — incendios",
-                    marker_color="#ffcc00",
-                    opacity=0.85
+                    x=all_years_fire, y=[firms_by_year.get(y, 0) for y in all_years_fire],
+                    name="FIRMS — incendios", marker_color="#ffcc00", opacity=0.85
                 ))
                 fig2.add_trace(go.Bar(
-                    x=all_years_fire,
-                    y=[modis_by_year.get(y, 0) for y in all_years_fire],
-                    name="MODIS — área quemada",
-                    marker_color="#ff3333",
-                    opacity=0.85
+                    x=all_years_fire, y=[modis_by_year.get(y, 0) for y in all_years_fire],
+                    name="MODIS — área quemada", marker_color="#ff3333", opacity=0.85
                 ))
                 fig2.update_layout(
-                    barmode="group",
-                    xaxis_title="Año",
-                    yaxis_title="Área (ha)",
+                    barmode="group", xaxis_title="Año", yaxis_title="Área (ha)",
                     legend=dict(orientation="h", yanchor="bottom", y=1.02),
-                    height=350,
-                    margin=dict(l=20, r=20, t=40, b=20),
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    paper_bgcolor="rgba(0,0,0,0)",
+                    height=350, margin=dict(l=20, r=20, t=40, b=20),
+                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="white")
                 )
                 st.plotly_chart(fig2, use_container_width=True)
@@ -287,7 +254,6 @@ with tab2:
             col3.metric("Deforestado",    f"{amazon.get('deforested_ha', 0):,.2f} ha")
             col4.metric("Regeneración",   f"{amazon.get('regrowth_ha', 0):,.2f} ha")
 
-        # Warnings
         for source, data in [("GLAD", glad), ("JRC", jrc), ("FIRMS", firms), ("MODIS", modis)]:
             if data.get("note"):
                 st.warning(f"⚠️ {source}: {data['note']}")
@@ -354,9 +320,9 @@ with tab4:
 
     col1, col2 = st.columns(2)
     with col1:
-        estado_sel    = st.selectbox("Estado", estados)
-        proyecto_id   = st.text_input("Project ID de GEE", placeholder="ee-nombre-proyecto")
-        svc_account   = st.text_input("Service Account email", placeholder="nombre@proyecto.iam.gserviceaccount.com")
+        estado_sel  = st.selectbox("Estado", estados)
+        proyecto_id = st.text_input("Project ID de GEE", placeholder="ee-nombre-proyecto")
+        svc_account = st.text_input("Service Account email", placeholder="nombre@proyecto.iam.gserviceaccount.com")
     with col2:
         credentials_json = st.text_area(
             "Credenciales JSON (Service Account Key)", height=150,
@@ -384,11 +350,11 @@ with tab5:
 
     st.markdown("### Fuentes de deforestación activas")
     st.dataframe({
-        "Fuente":            ["Hansen GFC", "GLAD Alerts", "JRC TMF", "FIRMS NASA", "MODIS MCD64A1"],
-        "Tipo":              ["Pérdida forestal", "Alertas", "Deforestación/Degradación", "Incendios activos", "Área quemada"],
-        "Resolución":        ["30m", "10m", "30m", "1km", "500m"],
-        "Cobertura temporal":["2000–2024", "2019–presente", "1990–2023", "2000–presente", "2000–presente"],
-        "Estado":            ["✅ Activa", "✅ Activa", "✅ Activa", "✅ Activa", "✅ Activa"],
+        "Fuente":             ["Hansen GFC", "GLAD Alerts", "JRC TMF", "FIRMS NASA", "MODIS MCD64A1"],
+        "Tipo":               ["Pérdida forestal", "Alertas", "Deforestación/Degradación", "Incendios activos", "Área quemada"],
+        "Resolución":         ["30m", "10m", "30m", "1km", "500m"],
+        "Cobertura temporal": ["2000–2024", "2019–presente", "1990–2023", "2000–presente", "2000–presente"],
+        "Estado":             ["✅ Activa", "✅ Activa", "✅ Activa", "✅ Activa", "✅ Activa"],
     }, use_container_width=True)
 
     st.divider()
@@ -442,18 +408,18 @@ with tab6:
     col1, col2, col3 = st.columns(3)
     col1.metric("Marco de referencia", "Olofsson et al. 2014")
     col2.metric("Método de muestreo",  "Estratificado aleatorio")
-    col3.metric("Unidad de validación","Puntos de referencia")
+    col3.metric("Unidad de validación", "Puntos de referencia")
 
     st.divider()
     st.markdown("### Métricas de precisión por fuente (pendiente)")
     st.dataframe({
-        "Fuente":                    ["Hansen GFC", "GLAD Alerts", "JRC TMF", "FIRMS NASA", "MODIS MCD64A1"],
-        "Precisión global (OA)":     ["—", "—", "—", "—", "—"],
-        "Precisión productor (PA)":  ["—", "—", "—", "—", "—"],
-        "Precisión usuario (UA)":    ["—", "—", "—", "—", "—"],
-        "F1-Score":                  ["—", "—", "—", "—", "—"],
-        "N puntos validados":        ["0", "0", "0", "0", "0"],
-        "Última actualización":      ["Pendiente"] * 5,
+        "Fuente":                   ["Hansen GFC", "GLAD Alerts", "JRC TMF", "FIRMS NASA", "MODIS MCD64A1"],
+        "Precisión global (OA)":    ["—", "—", "—", "—", "—"],
+        "Precisión productor (PA)": ["—", "—", "—", "—", "—"],
+        "Precisión usuario (UA)":   ["—", "—", "—", "—", "—"],
+        "F1-Score":                 ["—", "—", "—", "—", "—"],
+        "N puntos validados":       ["0", "0", "0", "0", "0"],
+        "Última actualización":     ["Pendiente"] * 5,
     }, use_container_width=True)
 
     st.divider()
@@ -466,9 +432,9 @@ with tab6:
     with col2:
         st.markdown("#### Matriz de confusión (vacía)")
         st.dataframe({
-            "":                          ["Deforestación (ref.)", "No deforestación (ref.)"],
-            "Deforestación (pred.)":     ["—", "—"],
-            "No deforestación (pred.)":  ["—", "—"],
+            "":                         ["Deforestación (ref.)", "No deforestación (ref.)"],
+            "Deforestación (pred.)":    ["—", "—"],
+            "No deforestación (pred.)": ["—", "—"],
         }, use_container_width=True)
 
     st.divider()
