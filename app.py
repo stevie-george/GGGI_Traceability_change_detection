@@ -23,11 +23,15 @@ st.markdown("""
             max-width: 100% !important;
         }
         h1 { font-size: 1.4rem !important; white-space: normal !important; }
+        .element-container:has(iframe) {
+            margin-bottom: 0 !important;
+            padding-bottom: 0 !important;
+        }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("🌿 Sistema de Alertas — Cero Deforestación")
-st.caption("Monitoreo para cultivos de **aguacate** y **agave tequilana** en México")
+st.caption("Monitoreo para cultivos de aguacate y agave tequilana en México")
 
 with st.sidebar:
     st.header("⚙️ Configuración")
@@ -68,7 +72,7 @@ with tab1:
                       horizontal=True)
 
     if metodo == "Dibujar en mapa":
-        st.caption("Usa las herramientas de la izquierda del mapa para dibujar. Puedes usar el botón ⛶ para pantalla completa.")
+        st.caption("Usa las herramientas de la izquierda para dibujar. Botón ⛶ para pantalla completa.")
         polygon_drawn = get_polygon_from_draw(center=[20.0, -102.0], zoom=6)
         if polygon_drawn:
             st.session_state["polygon"] = polygon_drawn
@@ -98,8 +102,7 @@ with tab1:
                 st.session_state["polygon"] = polygon_coords
                 st.success("Polígono creado ✓")
 
-    # Panel de análisis — visible cuando hay polígono
-   if "polygon" in st.session_state:
+    if "polygon" in st.session_state:
         st.divider()
         area = get_polygon_area_ha(st.session_state["polygon"])
         col_a, col_b = st.columns([1, 3])
@@ -148,7 +151,6 @@ with tab2:
         modis   = results.get("modis", {})
         amazon  = results.get("amazon", {})
 
-        # Mapa grande
         m = create_alert_map(polygon, results)
         st_folium(m, width=None, height=650,
                   returned_objects=[], use_container_width=True)

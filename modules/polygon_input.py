@@ -5,6 +5,7 @@ from shapely.geometry import shape, Polygon
 from streamlit_folium import st_folium
 import folium
 
+
 def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
     import folium.plugins as plugins
 
