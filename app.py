@@ -24,14 +24,14 @@ st.markdown("""
         }
         iframe { 
             min-height: 100% !important;
-            height: 100p% !important;
+            height: 100% !important;
             width: 100% !important;
         }
         .stIFrame {
             width: 100% !important;
         }
         [data-testid="stIFrame"] { 
-            height: 650px !important;
+            height: 100% !important;
             width: 100% !important;
         }
     </style>
@@ -62,7 +62,14 @@ with st.sidebar:
     else:
         st.error("GEE no conectado")
 
-tab1, tab2, tab3 = st.tabs(["📍 Polígono", "🗺️ Mapa de alertas", "📄 Reporte"])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "📍 Polígono",
+    "🗺️ Mapa de alertas", 
+    "📄 Reporte",
+    "⚙️ Credenciales GEE",
+    "🗂️ Fuentes de datos",
+    "✅ Validación"
+])
 
 with tab1:
     st.subheader("Ingresa el polígono a analizar")
@@ -206,5 +213,160 @@ with tab3:
                 st.download_button("⬇️ Descargar Excel", excel,
                                    "reporte_deforestacion.xlsx",
                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                
+
+with tab4:
+    st.subheader("⚙️ Configuración de credenciales GEE por estado")
+    st.info("Esta sección permite configurar cuentas de Google Earth Engine independientes para cada estado de la República Mexicana.")
+    
+    st.markdown("### Estado actual de conexión")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Proyecto GEE activo", "ee-stephaniegeorge")
+        st.metric("Estado de conexión", "Conectado ✓" if initialize_gee() else "Desconectado ✗")
+    with col2:
+        st.metric("Service Account", "gee-streamlit@ee-stephaniegeorge")
+        st.metric("Tier", "Contributor")
+
+    st.divider()
+    st.markdown("### Agregar credenciales por estado")
+    
+    estados = [
+        "Jalisco", "Michoacán", "Nayarit", "Colima", "Aguascalientes",
+        "Zacatecas", "Guanajuato", "Querétaro", "Estado de México",
+        "Morelos", "Puebla", "Oaxaca", "Chiapas", "Veracruz", "Yucatán",
+        "Campeche", "Quintana Roo", "Tabasco", "Guerrero", "Hidalgo",
+        "San Luis Potosí", "Tamaulipas", "Nuevo León", "Coahuila",
+        "Chihuahua", "Sonora", "Sinaloa", "Durango", "Baja California",
+        "Baja California Sur", "Tlaxcala", "CDMX"
+    ]
+
+    col1, col2 = st.columns(2)
+    with col1:
+        estado_sel = st.selectbox("Estado", estados)
+        proyecto_id = st.text_input("Project ID de GEE", placeholder="ee-nombre-proyecto")
+        service_account = st.text_input("Service Account email", placeholder="nombre@proyecto.iam.gserviceaccount.com")
+    with col2:
+        credentials_json = st.text_area("Credenciales JSON (Service Account Key)", height=150, placeholder='{\n  "type": "service_account",\n  "project_id": "...",\n  ...\n}')
+
+    st.button("💾 Guardar credenciales", disabled=True)
+    st.caption("⚠️ Funcionalidad en desarrollo — disponible en v2.0")
+
+    st.divider()
+    st.markdown("### Credenciales configuradas por estado")
+    st.dataframe({
+        "Estado": ["—"],
+        "Proyecto GEE": ["—"],
+        "Service Account": ["—"],
+        "Estado": ["Sin configurar"],
+    }, use_container_width=True)
+
+
+with tab5:
+    st.subheader("🗂️ Fuentes de datos y capas adicionales")
+    st.info("Esta sección permitirá incorporar nuevas fuentes de datos satelitales y capas de uso de suelo para enriquecer el análisis.")
+
+    st.markdown("### Fuentes de deforestación activas")
+    st.dataframe({
+        "Fuente": ["Hansen GFC", "GLAD Alerts", "JRC TMF", "FIRMS NASA", "MODIS MCD64A1"],
+        "Tipo": ["Pérdida forestal", "Alertas", "Deforestación/Degradación", "Incendios activos", "Área quemada"],
+        "Resolución": ["30m", "10m", "30m", "1km", "500m"],
+        "Cobertura temporal": ["2000–2024", "2019–presente", "1990–2023", "2000–presente", "2000–presente"],
+        "Estado": ["✅ Activa", "✅ Activa", "✅ Activa", "✅ Activa", "✅ Activa"],
+    }, use_container_width=True)
+
+    st.divider()
+    st.markdown("### Capas de uso de suelo (próximamente)")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("#### 🌱 Capas en desarrollo")
+        capas_desarrollo = [
+            ("SIAP — Superficie agrícola por cultivo", "En desarrollo"),
+            ("INEGI Serie VII — Uso de suelo y vegetación", "En desarrollo"),
+            ("MapBiomas México — Clasificación anual", "En desarrollo"),
+            ("NALCMS — North American Land Change", "En desarrollo"),
+            ("RAN — Registro Agrario Nacional (parcelas)", "En desarrollo"),
+        ]
+        for nombre, estado in capas_desarrollo:
+            st.markdown(f"🔲 **{nombre}** — *{estado}*")
+
+    with col2:
+        st.markdown("#### 🔥 Capas de riesgo adicionales")
+        capas_riesgo = [
+            ("CONABIO — Áreas Naturales Protegidas", "En desarrollo"),
+            ("CONAFOR — Inventario Nacional Forestal", "En desarrollo"),
+            ("CONANP — Regiones Prioritarias", "En desarrollo"),
+            ("Global Forest Watch — Integridad forestal", "En desarrollo"),
+            ("WWF — Ecorregiones terrestres", "En desarrollo"),
+        ]
+        for nombre, estado in capas_riesgo:
+            st.markdown(f"🔲 **{nombre}** — *{estado}*")
+
+    st.divider()
+    st.markdown("### Agregar nueva fuente de datos")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.text_input("Nombre de la fuente", placeholder="Ej. INEGI Serie VII")
+        st.text_input("Asset ID en GEE", placeholder="Ej. INEGI/USVI/2017")
+        st.selectbox("Tipo de dato", ["ImageCollection", "Image", "FeatureCollection", "Table"])
+    with col2:
+        st.text_input("Banda principal", placeholder="Ej. landcover")
+        st.text_input("Descripción", placeholder="Breve descripción de la fuente")
+        st.color_picker("Color en mapa", "#FF5733")
+    
+    st.button("➕ Agregar fuente", disabled=True)
+    st.caption("⚠️ Funcionalidad en desarrollo — disponible en v2.0")
+
+
+with tab6:
+    st.subheader("✅ Validación y precisión del sistema")
+    st.info("Esta sección reportará las métricas de precisión del sistema de detección de deforestación, siguiendo el marco metodológico de Olofsson et al. (2014).")
+
+    st.markdown("### Marco metodológico")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Marco de referencia", "Olofsson et al. 2014")
+    col2.metric("Método de muestreo", "Estratificado aleatorio")
+    col3.metric("Unidad de validación", "Puntos de referencia")
+
+    st.divider()
+    st.markdown("### Métricas de precisión por fuente (pendiente)")
+    
+    st.dataframe({
+        "Fuente": ["Hansen GFC", "GLAD Alerts", "JRC TMF", "FIRMS NASA", "MODIS MCD64A1"],
+        "Precisión global (OA)": ["—", "—", "—", "—", "—"],
+        "Precisión productor (PA)": ["—", "—", "—", "—", "—"],
+        "Precisión usuario (UA)": ["—", "—", "—", "—", "—"],
+        "F1-Score": ["—", "—", "—", "—", "—"],
+        "N puntos validados": ["0", "0", "0", "0", "0"],
+        "Última actualización": ["Pendiente", "Pendiente", "Pendiente", "Pendiente", "Pendiente"],
+    }, use_container_width=True)
+
+    st.divider()
+    st.markdown("### Matriz de confusión")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.selectbox("Fuente a validar", ["Hansen GFC", "GLAD Alerts", "JRC TMF", "FIRMS NASA", "MODIS MCD64A1"])
+        st.selectbox("Período de validación", ["2015–2020", "2020–2023", "2023–2024"])
+        st.number_input("N puntos de validación", min_value=0, value=0)
+    with col2:
+        st.markdown("#### Matriz de confusión (vacía)")
+        st.dataframe({
+            "": ["Deforestación (ref.)", "No deforestación (ref.)"],
+            "Deforestación (pred.)": ["—", "—"],
+            "No deforestación (pred.)": ["—", "—"],
+        }, use_container_width=True)
+
+    st.divider()
+    st.markdown("### Cargar datos de validación")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.file_uploader("Subir puntos de validación (CSV/GeoJSON)", type=["csv", "geojson"], disabled=True)
+    with col2:
+        st.file_uploader("Subir matriz de confusión (Excel)", type=["xlsx"], disabled=True)
+    
+    st.button("📊 Calcular métricas", disabled=True)
+    st.caption("⚠️ Funcionalidad en desarrollo — disponible en v2.0")
+    
     else:
         st.info("Primero ingresa y analiza un polígono en la pestaña 'Polígono'")
