@@ -24,12 +24,12 @@ st.markdown("""
         }
         iframe {
             min-height: 100% !important;
-            height: 100% !important;
+            height: 1000px !important;
             width: 100% !important;
         }
         .stIFrame { width: 100% !important; }
         [data-testid="stIFrame"] {
-            height: 100% !important;
+            height: 1000px !important;
             width: 100% !important;
         }
     </style>
