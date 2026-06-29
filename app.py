@@ -15,29 +15,34 @@ st.set_page_config(page_title="Alertas Deforestación MX", page_icon="🌿", lay
 
 st.markdown("""
     <style>
+        /* Quita padding del contenedor principal */
         .block-container {
-            padding-top: 0.5rem;
-            padding-bottom: 0rem;
-            padding-left: 0.5rem;
-            padding-right: 0.5rem;
-            max-width: 100%;
+            padding-top: 1rem !important;
+            padding-bottom: 0rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            max-width: 100% !important;
         }
+        /* Fuerza el iframe a ocupar todo el espacio disponible */
+        .stIFrame > iframe,
         iframe {
-            min-height: 82vh !important;
-            height: 82vh !important;
             width: 100% !important;
+            min-height: 75vh !important;
+            height: 75vh !important;
         }
-        .stIFrame { width: 100% !important; }
-        [data-testid="stIFrame"] {
-            min-height: 82vh !important;
-            height: 82vh !important;
-            width: 100% !important;
-        }
-        [data-testid="stVerticalBlock"] iframe {
-            min-height: 82vh !important;
-            height: 82vh !important;
-        }
+        /* Evita que el titulo se corte */
+        h1 { white-space: normal !important; }
     </style>
+    <script>
+        // Fuerza resize de iframes cada segundo
+        setInterval(function() {
+            var iframes = document.querySelectorAll('iframe');
+            iframes.forEach(function(f) {
+                f.style.height = Math.floor(window.innerHeight * 0.75) + 'px';
+                f.style.minHeight = Math.floor(window.innerHeight * 0.75) + 'px';
+            });
+        }, 1000);
+    </script>
 """, unsafe_allow_html=True)
 
 st.title("🌿 Sistema de Alertas — Cero Deforestación")
@@ -45,7 +50,7 @@ st.markdown("Monitoreo para cultivos de **aguacate** y **agave tequilana** en M�
 
 with st.sidebar:
     st.header("⚙️ Configuración")
-    cultivo = st.selectbox("Cultivo", ["Aguacate", "Agave tequilana", "Otro"])
+    cultivo    = st.selectbox("Cultivo", ["Aguacate", "Agave tequilana", "Otro"])
     start_year = st.slider("Año inicio", 2001, 2023, 2015)
     end_year   = st.slider("Año fin",    2001, 2023, 2023)
 
@@ -77,11 +82,12 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 # TAB 1 — POLÍGONO
 # ══════════════════════════════════════════════════════════
 with tab1:
-    st.subheader("Ingresa el polígono a analizar")
-    metodo = st.radio("Método", ["Dibujar en mapa", "Subir archivo", "Coordenadas manuales"], horizontal=True)
+    metodo = st.radio("Método de ingreso", 
+                      ["Dibujar en mapa", "Subir archivo", "Coordenadas manuales"], 
+                      horizontal=True)
 
     if metodo == "Dibujar en mapa":
-        st.info("Dibuja un polígono usando las herramientas de la izquierda del mapa")
+        # Mapa de dibujo
         polygon_drawn = get_polygon_from_draw(center=[20.0, -102.0], zoom=6)
         if polygon_drawn:
             st.session_state["polygon"] = polygon_drawn
@@ -100,19 +106,28 @@ with tab1:
 
     elif metodo == "Coordenadas manuales":
         st.markdown("Ingresa coordenadas en formato `latitud, longitud` (una por línea):")
-        coords_text = st.text_area("Coordenadas", placeholder="20.123, -103.456\n20.124, -103.457\n20.120, -103.450", height=150)
+        coords_text = st.text_area(
+            "Coordenadas",
+            placeholder="20.123, -103.456\n20.124, -103.457\n20.120, -103.450",
+            height=150
+        )
         if st.button("Cargar coordenadas") and coords_text:
             polygon_coords = get_polygon_from_coords(coords_text)
             if polygon_coords:
                 st.session_state["polygon"] = polygon_coords
                 st.success("Polígono creado ✓")
 
-    # Botón siempre visible si hay polígono en session_state
+    # Panel de análisis — siempre visible si hay polígono
     if "polygon" in st.session_state:
+        st.divider()
         area = get_polygon_area_ha(st.session_state["polygon"])
-        st.metric("Área del polígono", f"{area:,.2f} ha")
+        col_a, col_b = st.columns([1, 3])
+        with col_a:
+            st.metric("Área del polígono", f"{area:,.2f} ha")
+        with col_b:
+            st.info("✅ Polígono listo. Haz clic en **Analizar** para iniciar el análisis satelital.")
 
-        if st.button("🔍 Analizar deforestación", type="primary"):
+        if st.button("🔍 Analizar deforestación", type="primary", use_container_width=True):
             polygon = st.session_state["polygon"]
             results = {"area_ha": area}
             progress = st.progress(0, text="Iniciando análisis...")
@@ -138,7 +153,7 @@ with tab1:
 
             progress.progress(100, text="¡Análisis completado!")
             st.session_state["results"] = results
-            st.success("¡Listo! Ve a la pestaña 'Mapa de alertas'")
+            st.success("¡Listo! Ve a la pestaña **Mapa de alertas**")
 
 # ══════════════════════════════════════════════════════════
 # TAB 2 — MAPA DE ALERTAS + DASHBOARD
@@ -154,14 +169,15 @@ with tab2:
         modis   = results.get("modis", {})
         amazon  = results.get("amazon", {})
 
-        # Mapa grande arriba
+        # Mapa grande
         m = create_alert_map(polygon, results)
-        st_folium(m, width=None, height=800, returned_objects=[], use_container_width=True)
+        map_height = 750
+        st_folium(m, width=None, height=map_height,
+                  returned_objects=[], use_container_width=True)
 
         st.divider()
-
-        # Métricas
         st.markdown("### 📊 Resumen de alertas")
+
         col1, col2, col3, col4, col5 = st.columns(5)
         col1.metric("Área polígono",     f"{results['area_ha']:,.2f} ha")
         col2.metric("Hansen pérdida",    f"{hansen.get('total_loss_ha', 0):,.2f} ha")
@@ -176,8 +192,6 @@ with tab2:
         col9.metric("JRC regrowth",    f"{jrc.get('regrowth_ha', 0):,.2f} ha")
 
         st.divider()
-
-        # Gráficas lado a lado
         col_left, col_right = st.columns(2)
 
         with col_left:
@@ -244,7 +258,6 @@ with tab2:
             else:
                 st.info("Sin datos de incendios disponibles para esta área.")
 
-        # JRC Amazon
         if amazon:
             st.divider()
             st.markdown("### 🌎 Cobertura forestal JRC Amazon")
@@ -258,7 +271,7 @@ with tab2:
             if data.get("note"):
                 st.warning(f"⚠️ {source}: {data['note']}")
     else:
-        st.info("Primero ingresa y analiza un polígono en la pestaña 'Polígono'")
+        st.info("Primero ingresa y analiza un polígono en la pestaña **Polígono**")
 
 # ══════════════════════════════════════════════════════════
 # TAB 3 — REPORTE
@@ -287,10 +300,10 @@ with tab3:
                                    "reporte_deforestacion.xlsx",
                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     else:
-        st.info("Primero ingresa y analiza un polígono en la pestaña 'Polígono'")
+        st.info("Primero ingresa y analiza un polígono en la pestaña **Polígono**")
 
 # ══════════════════════════════════════════════════════════
-# TAB 4 — CREDENCIALES GEE
+# TAB 4 — CONFIGURACIÓN / CREDENCIALES GEE
 # ══════════════════════════════════════════════════════════
 with tab4:
     st.subheader("⚙️ Configuración de credenciales GEE por estado")
@@ -406,8 +419,8 @@ with tab6:
 
     st.markdown("### Marco metodológico")
     col1, col2, col3 = st.columns(3)
-    col1.metric("Marco de referencia", "Olofsson et al. 2014")
-    col2.metric("Método de muestreo",  "Estratificado aleatorio")
+    col1.metric("Marco de referencia",  "Olofsson et al. 2014")
+    col2.metric("Método de muestreo",   "Estratificado aleatorio")
     col3.metric("Unidad de validación", "Puntos de referencia")
 
     st.divider()
