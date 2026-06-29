@@ -23,13 +23,13 @@ st.markdown("""
             max-width: 100%;
         }
         iframe {
-            min-height: 650px !important;
-            height: 650px !important;
+            min-height: 100% !important;
+            height: 100% !important;
             width: 100% !important;
         }
         .stIFrame { width: 100% !important; }
         [data-testid="stIFrame"] {
-            height: 650px !important;
+            height: 100% !important;
             width: 100% !important;
         }
     </style>
@@ -63,8 +63,8 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📍 Polígono",
     "🗺️ Mapa de alertas",
     "📄 Reporte",
-    "⚙️ Credenciales GEE",
-    "🗂️ Fuentes de datos",
+    "⚙️ Configuración",
+    "🗂️ Ingresar fuente",
     "✅ Validación"
 ])
 
