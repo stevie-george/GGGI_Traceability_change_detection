@@ -4,6 +4,7 @@ import json
 from shapely.geometry import shape, Polygon
 from streamlit_folium import st_folium
 import folium
+import streamlit.components.v1 as components
 
 
 def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
@@ -29,26 +30,57 @@ def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
         overlay=False, control=True
     ).add_to(m)
 
-    plugins.Draw(
-        export=True,
+    draw = plugins.Draw(
+        export=False,
         draw_options={
             "polygon": True, "rectangle": True,
             "circle": False, "marker": False,
             "polyline": False, "circlemarker": False
         },
         edit_options={"edit": True, "remove": True}
-    ).add_to(m)
-
-    folium.LayerControl(collapsed=False).add_to(m)
-    plugins.Fullscreen(position="topleft").add_to(m)
-
-    output = st_folium(
-        m,
-        use_container_width=True,
-        height=750,
-        returned_objects=["last_active_drawing"],
-        key="draw_map"
     )
+    draw.add_to(m)
+    folium.LayerControl(collapsed=False).add_to(m)
+
+    # Renderiza el mapa como HTML completo a altura real
+    map_html = m.get_root().render()
+
+    # Inyecta script para capturar el polígono y enviarlo a Streamlit
+    inject = """
+    <script>
+    var lastGeoJSON = null;
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+            var maps = Object.values(window).filter(v => v && v._container && v.on);
+            maps.forEach(function(leafletMap) {
+                leafletMap.on('draw:created', function(e) {
+                    lastGeoJSON = JSON.stringify(e.layer.toGeoJSON());
+                    document.getElementById('geojson_output').value = lastGeoJSON;
+                });
+                leafletMap.on('draw:deleted', function() {
+                    lastGeoJSON = null;
+                    document.getElementById('geojson_output').value = '';
+                });
+            });
+        }, 1000);
+    });
+    </script>
+    <input type="hidden" id="geojson_output" value="">
+    """
+
+    full_html = map_html.replace("</body>", inject + "</body>")
+    components.html(full_html, height=600, scrolling=False)
+
+    # Usamos st_folium oculto para capturar el polígono
+    # (sin height mínimo visible — solo para leer el estado)
+    with st.container():
+        output = st_folium(
+            m,
+            width=1,
+            height=1,
+            returned_objects=["last_active_drawing"],
+            key="draw_map_capture"
+        )
 
     polygon = None
     if output and output.get("last_active_drawing"):

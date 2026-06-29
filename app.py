@@ -18,19 +18,20 @@ st.markdown("""
         .block-container {
             padding-top: 0.5rem !important;
             padding-bottom: 0rem !important;
-            padding-left: 0.5rem !important;
-            padding-right: 0.5rem !important;
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
             max-width: 100% !important;
         }
-        h1 { font-size: 1.4rem !important; white-space: normal !important; }
-        .element-container:has(iframe) {
-            margin-bottom: 0 !important;
-            padding-bottom: 0 !important;
+        /* Oculta el st_folium fantasma de captura */
+        iframe[height="1"] {
+            display: none !important;
+            height: 0 !important;
+            min-height: 0 !important;
         }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🌿 Sistema de Alertas — Cero Deforestación")
+st.markdown("## 🌿 Sistema de Alertas — Cero Deforestación")
 st.caption("Monitoreo para cultivos de aguacate y agave tequilana en México")
 
 with st.sidebar:
@@ -72,7 +73,7 @@ with tab1:
                       horizontal=True)
 
     if metodo == "Dibujar en mapa":
-        st.caption("Usa las herramientas de la izquierda para dibujar. Botón ⛶ para pantalla completa.")
+        st.caption("Dibuja un polígono con las herramientas de la izquierda. El botón ⛶ abre pantalla completa.")
         polygon_drawn = get_polygon_from_draw(center=[20.0, -102.0], zoom=6)
         if polygon_drawn:
             st.session_state["polygon"] = polygon_drawn
@@ -81,21 +82,19 @@ with tab1:
         uploaded = st.file_uploader(
             "Sube tu archivo",
             type=["zip", "geojson", "kml"],
-            help="Para shapefiles: comprime todos los archivos (.shp, .dbf, .shx, .prj) en un .zip"
+            help="Para shapefiles: comprime .shp, .dbf, .shx y .prj en un .zip"
         )
         if uploaded:
             polygon_file = get_polygon_from_file(uploaded)
             if polygon_file:
                 st.session_state["polygon"] = polygon_file
-                st.success("Archivo cargado correctamente ✓")
+                st.success("Archivo cargado ✓")
 
     elif metodo == "Coordenadas manuales":
         st.markdown("Ingresa coordenadas en formato `latitud, longitud` (una por línea):")
-        coords_text = st.text_area(
-            "Coordenadas",
+        coords_text = st.text_area("Coordenadas",
             placeholder="20.123, -103.456\n20.124, -103.457\n20.120, -103.450",
-            height=150
-        )
+            height=150)
         if st.button("Cargar coordenadas") and coords_text:
             polygon_coords = get_polygon_from_coords(coords_text)
             if polygon_coords:
@@ -105,11 +104,11 @@ with tab1:
     if "polygon" in st.session_state:
         st.divider()
         area = get_polygon_area_ha(st.session_state["polygon"])
-        col_a, col_b = st.columns([1, 3])
+        col_a, col_b, col_c = st.columns([1, 1, 2])
         with col_a:
-            st.metric("Área del polígono", f"{area:,.2f} ha")
+            st.metric("Área", f"{area:,.2f} ha")
         with col_b:
-            if st.button("🔍 Analizar deforestación", type="primary", use_container_width=True):
+            if st.button("🔍 Analizar deforestación", type="primary"):
                 polygon = st.session_state["polygon"]
                 results = {"area_ha": area}
                 progress = st.progress(0, text="Iniciando análisis...")
