@@ -4,7 +4,6 @@ import json
 from shapely.geometry import shape, Polygon
 from streamlit_folium import st_folium
 import folium
-import streamlit.components.v1 as components
 
 
 def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
@@ -43,11 +42,10 @@ def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
     folium.LayerControl(collapsed=False).add_to(m)
     plugins.Fullscreen(position="topleft").add_to(m)
 
-    # Un solo st_folium — captura el polígono y muestra el mapa
     output = st_folium(
         m,
         use_container_width=True,
-        height=650,
+        height=800,
         returned_objects=["last_active_drawing"],
         key="draw_map"
     )
@@ -56,7 +54,6 @@ def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
     if output and output.get("last_active_drawing"):
         geojson = output["last_active_drawing"]
         polygon = shape(geojson["geometry"])
-        # Guarda inmediatamente en session_state
         st.session_state["polygon"] = polygon
 
     return polygon
