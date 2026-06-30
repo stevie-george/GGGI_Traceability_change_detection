@@ -43,23 +43,22 @@ def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
     folium.LayerControl(collapsed=False).add_to(m)
     plugins.Fullscreen(position="topleft").add_to(m)
 
-    # Mapa grande via components.html — sin limite de Streamlit
-    map_html = m.get_root().render()
-    components.html(map_html, height=700, scrolling=False)
-
-    # st_folium invisible solo para capturar el poligono dibujado
+    # Un solo st_folium — captura el polígono y muestra el mapa
     output = st_folium(
         m,
-        width=1,
-        height=1,
+        use_container_width=True,
+        height=650,
         returned_objects=["last_active_drawing"],
-        key="draw_map_capture"
+        key="draw_map"
     )
 
     polygon = None
     if output and output.get("last_active_drawing"):
         geojson = output["last_active_drawing"]
         polygon = shape(geojson["geometry"])
+        # Guarda inmediatamente en session_state
+        st.session_state["polygon"] = polygon
+
     return polygon
 
 
