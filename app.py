@@ -141,27 +141,50 @@ with tab2:
         modis   = results.get("modis", {})
         amazon  = results.get("amazon", {})
 
+        # Mapa grande con basemaps satelite
         m = create_alert_map(polygon, results)
-        st_folium(m, width=None, height=700,
+        st_folium(m, width=None, height=1100,
                   returned_objects=[], use_container_width=True)
 
         st.divider()
+
+        # ── Dashboard métricas ────────────────────────────────────────
         st.markdown("### 📊 Resumen de alertas")
 
+        # Fila 1 — Deforestación
+        st.markdown("**🌳 Cobertura forestal**")
         col1, col2, col3, col4, col5 = st.columns(5)
         col1.metric("Área polígono",     f"{results['area_ha']:,.2f} ha")
-        col2.metric("Hansen pérdida",    f"{hansen.get('total_loss_ha', 0):,.2f} ha")
-        col3.metric("JRC deforestación", f"{jrc.get('deforestation_ha', 0):,.2f} ha")
-        col4.metric("JRC degradación",   f"{jrc.get('degradation_ha', 0):,.2f} ha")
-        col5.metric("Hansen ganancia",   f"{hansen.get('gain_ha', 0):,.2f} ha")
+        col2.metric("Hansen pérdida",    f"{hansen.get('total_loss_ha', 0):,.2f} ha",
+                    delta=f"{round(hansen.get('total_loss_ha', 0)/results['area_ha']*100, 2) if results['area_ha'] else 0}%",
+                    delta_color="inverse")
+        col3.metric("Hansen ganancia",   f"{hansen.get('gain_ha', 0):,.2f} ha",
+                    delta_color="normal")
+        col4.metric("JRC deforestación", f"{jrc.get('deforestation_ha', 0):,.2f} ha",
+                    delta_color="inverse")
+        col5.metric("JRC degradación",   f"{jrc.get('degradation_ha', 0):,.2f} ha",
+                    delta_color="inverse")
 
+        # Fila 2 — Alertas e incendios
+        st.markdown("**🔥 Alertas e incendios**")
         col6, col7, col8, col9 = st.columns(4)
-        col6.metric("GLAD alertas",    f"{glad.get('alert_area_ha', 0):,.2f} ha")
-        col7.metric("FIRMS incendios", f"{firms.get('fire_area_ha', 0):,.2f} ha")
-        col8.metric("MODIS quemado",   f"{modis.get('burn_area_ha', 0):,.2f} ha")
-        col9.metric("JRC regrowth",    f"{jrc.get('regrowth_ha', 0):,.2f} ha")
+        col6.metric("GLAD alertas",    f"{glad.get('alert_area_ha', 0):,.2f} ha",  delta_color="inverse")
+        col7.metric("FIRMS incendios", f"{firms.get('fire_area_ha', 0):,.2f} ha",  delta_color="inverse")
+        col8.metric("MODIS quemado",   f"{modis.get('burn_area_ha', 0):,.2f} ha",  delta_color="inverse")
+        col9.metric("JRC regrowth",    f"{jrc.get('regrowth_ha', 0):,.2f} ha",     delta_color="normal")
+
+        # Fila 3 — JRC Amazon (si disponible)
+        if amazon:
+            st.markdown("**🌎 Cobertura JRC Amazon**")
+            col_a, col_b, col_c, col_d = st.columns(4)
+            col_a.metric("Bosque intacto",  f"{amazon.get('undisturbed_ha', 0):,.2f} ha")
+            col_b.metric("Degradado",       f"{amazon.get('degraded_ha', 0):,.2f} ha",    delta_color="inverse")
+            col_c.metric("Deforestado",     f"{amazon.get('deforested_ha', 0):,.2f} ha",  delta_color="inverse")
+            col_d.metric("Regeneración",    f"{amazon.get('regrowth_ha', 0):,.2f} ha",    delta_color="normal")
 
         st.divider()
+
+        # ── Gráficas ──────────────────────────────────────────────────
         col_left, col_right = st.columns(2)
 
         with col_left:
@@ -191,7 +214,7 @@ with tab2:
                 fig1.update_layout(
                     xaxis_title="Año", yaxis_title="Área (ha)",
                     legend=dict(orientation="h", yanchor="bottom", y=1.02),
-                    height=350, margin=dict(l=20, r=20, t=40, b=20),
+                    height=380, margin=dict(l=20, r=20, t=40, b=20),
                     plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="white")
                 )
@@ -220,22 +243,13 @@ with tab2:
                 fig2.update_layout(
                     barmode="group", xaxis_title="Año", yaxis_title="Área (ha)",
                     legend=dict(orientation="h", yanchor="bottom", y=1.02),
-                    height=350, margin=dict(l=20, r=20, t=40, b=20),
+                    height=380, margin=dict(l=20, r=20, t=40, b=20),
                     plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="white")
                 )
                 st.plotly_chart(fig2, use_container_width=True)
             else:
                 st.info("Sin datos de incendios disponibles.")
-
-        if amazon:
-            st.divider()
-            st.markdown("### 🌎 Cobertura forestal JRC Amazon")
-            col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Bosque intacto", f"{amazon.get('undisturbed_ha', 0):,.2f} ha")
-            col2.metric("Degradado",      f"{amazon.get('degraded_ha', 0):,.2f} ha")
-            col3.metric("Deforestado",    f"{amazon.get('deforested_ha', 0):,.2f} ha")
-            col4.metric("Regeneración",   f"{amazon.get('regrowth_ha', 0):,.2f} ha")
 
         for source, data in [("GLAD", glad), ("JRC", jrc), ("FIRMS", firms), ("MODIS", modis)]:
             if data.get("note"):
