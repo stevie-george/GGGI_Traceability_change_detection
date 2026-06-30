@@ -16,13 +16,12 @@ st.set_page_config(page_title="Alertas Deforestación MX", page_icon="🌿", lay
 st.markdown("""
     <style>
         .block-container {
-            padding-top: 0.5rem !important;
+            padding-top: 1rem !important;
             padding-bottom: 0rem !important;
             padding-left: 0.8rem !important;
             padding-right: 0.8rem !important;
             max-width: 100% !important;
         }
-
         iframe[height="1"] {
             display: none !important;
             height: 0 !important;
@@ -31,7 +30,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<p style="font-size:1.3rem; font-weight:600; margin-bottom:0;">🌿 Sistema de Alertas — Cero Deforestación</p>', unsafe_allow_html=True)
+st.markdown("# 🌿 Sistema de Alertas — Cero Deforestación")
 st.caption("Monitoreo para cultivos de aguacate y agave tequilana en México")
 
 with st.sidebar:
@@ -64,16 +63,13 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "✅ Validación"
 ])
 
-# ══════════════════════════════════════════════════════════
-# TAB 1 — POLÍGONO
-# ══════════════════════════════════════════════════════════
 with tab1:
     metodo = st.radio("Método de ingreso",
                       ["Dibujar en mapa", "Subir archivo", "Coordenadas manuales"],
                       horizontal=True)
 
     if metodo == "Dibujar en mapa":
-        st.caption("Dibuja un polígono con las herramientas de la izquierda. El botón ⛶ abre pantalla completa.")
+        st.caption("Dibuja un polígono con las herramientas de la izquierda. Botón ⛶ para pantalla completa.")
         polygon_drawn = get_polygon_from_draw(center=[20.0, -102.0], zoom=6)
         if polygon_drawn:
             st.session_state["polygon"] = polygon_drawn
@@ -135,9 +131,6 @@ with tab1:
                 st.session_state["results"] = results
                 st.success("¡Listo! Ve a la pestaña **Mapa de alertas**")
 
-# ══════════════════════════════════════════════════════════
-# TAB 2 — MAPA DE ALERTAS + DASHBOARD
-# ══════════════════════════════════════════════════════════
 with tab2:
     if "results" in st.session_state and "polygon" in st.session_state:
         results = st.session_state["results"]
@@ -205,7 +198,7 @@ with tab2:
                 )
                 st.plotly_chart(fig1, use_container_width=True)
             else:
-                st.info("Sin datos anuales disponibles para esta área.")
+                st.info("Sin datos anuales disponibles.")
 
         with col_right:
             st.markdown("### 🔥 Incendios y área quemada")
@@ -234,7 +227,7 @@ with tab2:
                 )
                 st.plotly_chart(fig2, use_container_width=True)
             else:
-                st.info("Sin datos de incendios disponibles para esta área.")
+                st.info("Sin datos de incendios disponibles.")
 
         if amazon:
             st.divider()
@@ -251,9 +244,6 @@ with tab2:
     else:
         st.info("Primero ingresa y analiza un polígono en la pestaña **Polígono**")
 
-# ══════════════════════════════════════════════════════════
-# TAB 3 — REPORTE
-# ══════════════════════════════════════════════════════════
 with tab3:
     st.subheader("Generar reporte")
     if "results" in st.session_state and "polygon" in st.session_state:
@@ -280,9 +270,6 @@ with tab3:
     else:
         st.info("Primero ingresa y analiza un polígono en la pestaña **Polígono**")
 
-# ══════════════════════════════════════════════════════════
-# TAB 4 — CONFIGURACIÓN / CREDENCIALES GEE
-# ══════════════════════════════════════════════════════════
 with tab4:
     st.subheader("⚙️ Configuración de credenciales GEE por estado")
     st.info("Esta sección permite configurar cuentas de Google Earth Engine independientes para cada estado de la República Mexicana.")
@@ -332,9 +319,6 @@ with tab4:
         "Estatus":         ["Sin configurar"],
     }, use_container_width=True)
 
-# ══════════════════════════════════════════════════════════
-# TAB 5 — FUENTES DE DATOS
-# ══════════════════════════════════════════════════════════
 with tab5:
     st.subheader("🗂️ Fuentes de datos y capas adicionales")
     st.info("Esta sección permitirá incorporar nuevas fuentes de datos satelitales y capas de uso de suelo para enriquecer el análisis.")
@@ -361,7 +345,6 @@ with tab5:
             "RAN — Registro Agrario Nacional (parcelas)",
         ]:
             st.markdown(f"🔲 **{nombre}** — *En desarrollo*")
-
     with col2:
         st.markdown("#### 🔥 Capas de riesgo adicionales")
         for nombre in [
@@ -388,9 +371,6 @@ with tab5:
     st.button("➕ Agregar fuente", disabled=True)
     st.caption("⚠️ Funcionalidad en desarrollo — disponible en v2.0")
 
-# ══════════════════════════════════════════════════════════
-# TAB 6 — VALIDACIÓN
-# ══════════════════════════════════════════════════════════
 with tab6:
     st.subheader("✅ Validación y precisión del sistema")
     st.info("Esta sección reportará las métricas de precisión del sistema de detección de deforestación, siguiendo el marco metodológico de Olofsson et al. (2014).")
