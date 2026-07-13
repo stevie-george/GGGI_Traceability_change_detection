@@ -144,7 +144,7 @@ with tab2:
         # Mapa grande con basemaps satelite
         m = create_alert_map(polygon, results)
         st_folium(m, width=None, height=1100,
-                  returned_objects=[], use_container_width=True)
+                  returned_objects=[], width='stretch')
 
         st.divider()
 
@@ -218,7 +218,7 @@ with tab2:
                     plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                     font=dict(color="white")
                 )
-                st.plotly_chart(fig1, use_container_width=True)
+                st.plotly_chart(fig1, use_container_width="")
             else:
                 st.info("Sin datos anuales disponibles.")
 

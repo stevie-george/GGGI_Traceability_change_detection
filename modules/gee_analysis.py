@@ -55,9 +55,9 @@ def get_polygon_area_ha(polygon):
     gdf_proj = gdf.to_crs("EPSG:6933")
     return round(gdf_proj.geometry.area.values[0] / 10000, 4)
 
-def analyze_hansen(polygon, start_year=1, end_year=24):
+def analyze_hansen(polygon, start_year=1, end_year=25):
     ee_geom = polygon_to_ee(polygon)
-    hansen = ee.Image("UMD/hansen/global_forest_change_2024_v1_12")
+    hansen = ee.Image("UMD/hansen/global_forest_change_2024_v1_13")
     loss_year = hansen.select("lossyear")
     degradation = hansen.select("gain")
     area_img = ee.Image.pixelArea().divide(10000)

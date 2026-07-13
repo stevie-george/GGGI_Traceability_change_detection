@@ -44,7 +44,7 @@ def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
 
     output = st_folium(
         m,
-        use_container_width=True,
+        width='stretch',
         height=1100,
         returned_objects=["last_active_drawing"],
         key="draw_map"
