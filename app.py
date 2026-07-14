@@ -143,7 +143,7 @@ with tab2:
 
         # Mapa grande con basemaps satelite
         m = create_alert_map(polygon, results)
-        st_folium(m, width=None, height=1100,
+        st_folium(m, height=1100,
                   returned_objects=[], width='stretch')
 
         st.divider()
