@@ -9,21 +9,13 @@ GEE_PROJECT = 'ee-stephaniegeorge'
 def initialize_gee():
     try:
         import streamlit as st
-        import json
-
         project = st.secrets["gee"]["project"]
         creds_json = st.secrets["earthengine"]["credentials"]
         service_account = st.secrets["earthengine"]["service_account"]
-
-        credentials = ee.ServiceAccountCredentials(
-            service_account,
-            key_data=creds_json
-        )
+        credentials = ee.ServiceAccountCredentials(service_account, key_data=creds_json)
         ee.Initialize(credentials=credentials, project=project)
         return True
-
     except Exception as e1:
-        # Fallback local sin streamlit secrets
         try:
             ee.Initialize(project=GEE_PROJECT)
             return True
@@ -34,38 +26,68 @@ def initialize_gee():
                 return True
             except:
                 return False
-            
+
 
 def polygon_to_ee(polygon):
-    # Simplifica geometría para polígonos grandes
-    from shapely.geometry import mapping
-    import geopandas as gpd
-    
+    from shapely.geometry import mapping, MultiPolygon
+    from shapely.ops import unary_union
+
+    # Maneja MultiPolygon
+    if polygon.geom_type == "MultiPolygon":
+        polygon = max(polygon.geoms, key=lambda p: p.area)
+    elif polygon.geom_type == "GeometryCollection":
+        polys = [g for g in polygon.geoms if g.geom_type in ("Polygon", "MultiPolygon")]
+        if not polys:
+            raise ValueError("No se encontraron polígonos en la geometría")
+        polygon = max(polys, key=lambda p: p.area)
+        if polygon.geom_type == "MultiPolygon":
+            polygon = max(polygon.geoms, key=lambda p: p.area)
+
+    # Repara geometría inválida
+    if not polygon.is_valid:
+        polygon = polygon.buffer(0)
+        if polygon.geom_type == "MultiPolygon":
+            polygon = max(polygon.geoms, key=lambda p: p.area)
+
+    # Simplifica si tiene muchos vértices
+    try:
+        n_coords = len(list(polygon.exterior.coords))
+        if n_coords > 500:
+            polygon = polygon.simplify(0.01, preserve_topology=True)
+            if polygon.geom_type == "MultiPolygon":
+                polygon = max(polygon.geoms, key=lambda p: p.area)
+    except AttributeError:
+        polygon = polygon.convex_hull
+
+    # Simplifica si es muy grande
     gdf = gpd.GeoDataFrame(geometry=[polygon], crs="EPSG:4326")
     area_ha = gdf.to_crs("EPSG:6933").geometry.area.values[0] / 10000
-    
-    # Si es mayor a 500,000 ha simplifica la geometría
     if area_ha > 500000:
-        polygon = polygon.simplify(0.01, preserve_topology=True)
-    
+        polygon = polygon.simplify(0.05, preserve_topology=True)
+        if polygon.geom_type == "MultiPolygon":
+            polygon = max(polygon.geoms, key=lambda p: p.area)
+
     return ee.Geometry(mapping(polygon))
+
 
 def get_polygon_area_ha(polygon):
     gdf = gpd.GeoDataFrame(geometry=[polygon], crs="EPSG:4326")
     gdf_proj = gdf.to_crs("EPSG:6933")
     return round(gdf_proj.geometry.area.values[0] / 10000, 4)
 
+
 def analyze_hansen(polygon, start_year=1, end_year=25):
     ee_geom = polygon_to_ee(polygon)
-    hansen = ee.Image("UMD/hansen/global_forest_change_2024_v1_13")
+    hansen = ee.Image("UMD/hansen/global_forest_change_2025_v1_13")
     loss_year = hansen.select("lossyear")
-    degradation = hansen.select("gain")
+    gain = hansen.select("gain")
     area_img = ee.Image.pixelArea().divide(10000)
 
     # Pérdida total
     loss_mask = loss_year.gte(start_year).And(loss_year.lte(end_year))
     total_loss = area_img.updateMask(loss_mask).reduceRegion(
-        reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
+        reducer=ee.Reducer.sum(), geometry=ee_geom,
+        scale=30, maxPixels=1e13, bestEffort=True
     ).getInfo()
 
     # Por año
@@ -73,18 +95,19 @@ def analyze_hansen(polygon, start_year=1, end_year=25):
     for y in range(start_year, end_year + 1):
         year_mask = loss_year.eq(y)
         year_area = area_img.updateMask(year_mask).reduceRegion(
-            reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
+            reducer=ee.Reducer.sum(), geometry=ee_geom,
+            scale=30, maxPixels=1e13, bestEffort=True
         ).getInfo()
         area_ha = year_area.get("area", 0) or 0
         if area_ha > 0:
             by_year.append({"year": 2000 + y, "area_ha": round(area_ha, 4)})
 
     # Ganancia forestal
-    gain_area = area_img.updateMask(degradation).reduceRegion(
-        reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
+    gain_area = area_img.updateMask(gain).reduceRegion(
+        reducer=ee.Reducer.sum(), geometry=ee_geom,
+        scale=30, maxPixels=1e13, bestEffort=True
     ).getInfo()
 
-    # Imagen de pérdida para visualización en mapa
     loss_image = loss_year.updateMask(loss_mask)
 
     return {
@@ -93,6 +116,7 @@ def analyze_hansen(polygon, start_year=1, end_year=25):
         "by_year": by_year,
         "loss_image": loss_image
     }
+
 
 def analyze_glad(polygon):
     ee_geom = polygon_to_ee(polygon)
@@ -104,7 +128,8 @@ def analyze_glad(polygon):
         area_img = ee.Image.pixelArea().divide(10000)
         alert_mask = glad.gt(0)
         alert_area = area_img.updateMask(alert_mask).reduceRegion(
-            reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
+            reducer=ee.Reducer.sum(), geometry=ee_geom,
+            scale=10, maxPixels=1e13, bestEffort=True
         ).getInfo()
         area_val = list(alert_area.values())[0] if alert_area else 0
         return {
@@ -114,7 +139,7 @@ def analyze_glad(polygon):
         }
     except Exception as e:
         return {"alert_area_ha": 0, "alert_image": None, "by_year": [], "note": str(e)}
-    
+
 
 def analyze_jrc_deforestation(polygon):
     ee_geom = polygon_to_ee(polygon)
@@ -123,72 +148,82 @@ def analyze_jrc_deforestation(polygon):
             .filterBounds(ee_geom).mosaic()
         area_img = ee.Image.pixelArea().divide(10000)
 
-        # Por año 1990-2023
-        by_year_defor = []
-        by_year_degrad = []
         years = list(range(2015, 2024))
+        by_year_defor   = []
+        by_year_degrad  = []
+        by_year_regrowth = []
+
         for y in years:
             band = f"Dec{y}"
             b = jrc.select(band)
-            defor_mask  = b.eq(3)
-            degrad_mask = b.eq(2)
+
+            # Deforestación
+            defor_mask = b.eq(3)
             da = area_img.updateMask(defor_mask).reduceRegion(
-                reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
+                reducer=ee.Reducer.sum(), geometry=ee_geom,
+                scale=30, maxPixels=1e13, bestEffort=True
             ).getInfo()
-            dga = area_img.updateMask(degrad_mask).reduceRegion(
-                reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
-            ).getInfo()
-            dv  = list(da.values())[0]  if da  else 0
-            dgv = list(dga.values())[0] if dga else 0
+            dv = list(da.values())[0] if da else 0
             if (dv or 0) > 0:
                 by_year_defor.append({"year": y, "area_ha": round(dv or 0, 4)})
+
+            # Degradación
+            degrad_mask = b.eq(2)
+            dga = area_img.updateMask(degrad_mask).reduceRegion(
+                reducer=ee.Reducer.sum(), geometry=ee_geom,
+                scale=30, maxPixels=1e13, bestEffort=True
+            ).getInfo()
+            dgv = list(dga.values())[0] if dga else 0
             if (dgv or 0) > 0:
                 by_year_degrad.append({"year": y, "area_ha": round(dgv or 0, 4)})
-            by_year_regrowth = []
-            for y in years:
-                band = f"Dec{y}"
-                b = jrc.select(band)
-                # ... código existente ...
-                rg_mask = b.eq(4)  # clase 4 = regrowth
-                rga = area_img.updateMask(rg_mask).reduceRegion(
-                    reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
-                ).getInfo()
-                rgv = list(rga.values())[0] if rga else 0
-                if (rgv or 0) > 0:
-                    by_year_regrowth.append({"year": y, "area_ha": round(rgv or 0, 4)})
 
-        # Totales con banda más reciente
+            # Regrowth
+            rg_mask = b.eq(4)
+            rga = area_img.updateMask(rg_mask).reduceRegion(
+                reducer=ee.Reducer.sum(), geometry=ee_geom,
+                scale=30, maxPixels=1e13, bestEffort=True
+            ).getInfo()
+            rgv = list(rga.values())[0] if rga else 0
+            if (rgv or 0) > 0:
+                by_year_regrowth.append({"year": y, "area_ha": round(rgv or 0, 4)})
+
+        # Totales banda más reciente
         band_latest = jrc.select("Dec2023")
         defor_mask  = band_latest.eq(3)
         degrad_mask = band_latest.eq(2)
         defor_total = area_img.updateMask(defor_mask).reduceRegion(
-            reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
+            reducer=ee.Reducer.sum(), geometry=ee_geom,
+            scale=30, maxPixels=1e13, bestEffort=True
         ).getInfo()
         degrad_total = area_img.updateMask(degrad_mask).reduceRegion(
-            reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
+            reducer=ee.Reducer.sum(), geometry=ee_geom,
+            scale=30, maxPixels=1e13, bestEffort=True
         ).getInfo()
 
         return {
-            "deforestation_ha": round(list(defor_total.values())[0]  or 0, 4),
-            "degradation_ha":   round(list(degrad_total.values())[0] or 0, 4),
-            "by_year_defor":    by_year_defor,
-            "by_year_degrad":   by_year_degrad,
+            "deforestation_ha":  round(list(defor_total.values())[0]  or 0, 4),
+            "degradation_ha":    round(list(degrad_total.values())[0] or 0, 4),
+            "by_year_defor":     by_year_defor,
+            "by_year_degrad":    by_year_degrad,
+            "by_year_regrowth":  by_year_regrowth,
+            "regrowth_ha":       round(sum(r["area_ha"] for r in by_year_regrowth), 4),
             "defor_image":  band_latest.updateMask(defor_mask),
             "degrad_image": band_latest.updateMask(degrad_mask),
-            "by_year_regrowth": by_year_regrowth,
-            "regrowth_ha": round(sum(r["area_ha"] for r in by_year_regrowth), 4),
         }
     except Exception as e:
-        return {"deforestation_ha": 0, "degradation_ha": 0,
-                "by_year_defor": [], "by_year_degrad": [],
-                "defor_image": None, "degrad_image": None, "note": str(e)}
+        return {
+            "deforestation_ha": 0, "degradation_ha": 0,
+            "by_year_defor": [], "by_year_degrad": [], "by_year_regrowth": [],
+            "regrowth_ha": 0, "defor_image": None, "degrad_image": None,
+            "note": str(e)
+        }
+
 
 def analyze_jrc_amazon(polygon):
     ee_geom = polygon_to_ee(polygon)
     try:
         jrc = ee.ImageCollection("projects/JRC/TMF/v1_2023/AnnualChanges") \
-            .filterBounds(ee_geom) \
-            .mosaic()
+            .filterBounds(ee_geom).mosaic()
         area_img = ee.Image.pixelArea().divide(10000)
         band = jrc.select("Dec2023")
         results = {}
@@ -201,7 +236,8 @@ def analyze_jrc_amazon(polygon):
         for name, cls in labels.items():
             mask = band.eq(cls)
             area = area_img.updateMask(mask).reduceRegion(
-                reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
+                reducer=ee.Reducer.sum(), geometry=ee_geom,
+                scale=30, maxPixels=1e13, bestEffort=True
             ).getInfo()
             val = list(area.values())[0] if area else 0
             results[name] = round(val or 0, 4)
@@ -209,6 +245,7 @@ def analyze_jrc_amazon(polygon):
     except Exception as e:
         return {"undisturbed_ha": 0, "degraded_ha": 0,
                 "deforested_ha": 0, "regrowth_ha": 0, "note": str(e)}
+
 
 def analyze_firms(polygon):
     ee_geom = polygon_to_ee(polygon)
@@ -222,7 +259,8 @@ def analyze_firms(polygon):
                 .select("T21").mosaic()
             fire_mask = firms.gt(300)
             fire_area = area_img.updateMask(fire_mask).reduceRegion(
-                reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
+                reducer=ee.Reducer.sum(), geometry=ee_geom,
+                scale=1000, maxPixels=1e13, bestEffort=True
             ).getInfo()
             val = list(fire_area.values())[0] if fire_area else 0
             if (val or 0) > 0:
@@ -238,6 +276,7 @@ def analyze_firms(polygon):
     except Exception as e:
         return {"fire_area_ha": 0, "by_year": [], "fire_image": None, "note": str(e)}
 
+
 def analyze_modis_burn(polygon):
     ee_geom = polygon_to_ee(polygon)
     try:
@@ -250,7 +289,8 @@ def analyze_modis_burn(polygon):
                 .select("BurnDate").mosaic()
             burn_mask = modis.gt(0)
             burn_area = area_img.updateMask(burn_mask).reduceRegion(
-                reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
+                reducer=ee.Reducer.sum(), geometry=ee_geom,
+                scale=500, maxPixels=1e13, bestEffort=True
             ).getInfo()
             val = list(burn_area.values())[0] if burn_area else 0
             if (val or 0) > 0:
