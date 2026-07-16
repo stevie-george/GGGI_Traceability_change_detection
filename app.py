@@ -99,34 +99,36 @@ with tab1:
         col_a, col_b = st.columns([1, 3])
         with col_a:
             st.metric("Área", f"{area:,.2f} ha")
-            if st.button("🔍 Analizar", type="primary"):
-                polygon = st.session_state["polygon"]
-                results = {"area_ha": area}
-                progress = st.progress(0, text="Iniciando análisis...")
+        with col_b:
+            analizar = st.button("🔍 Analizar deforestación", type="primary", key="btn_analizar")
 
-                if use_hansen:
-                    progress.progress(15, text="Consultando Hansen...")
-                    results["hansen"] = analyze_hansen(polygon, start_year - 2000, end_year - 2000)
-                if use_glad:
-                    progress.progress(30, text="Consultando GLAD...")
-                    results["glad"] = analyze_glad(polygon)
-                if use_jrc:
-                    progress.progress(50, text="Consultando JRC...")
-                    results["jrc"] = analyze_jrc_deforestation(polygon)
-                if use_firms:
-                    progress.progress(65, text="Consultando FIRMS NASA...")
-                    results["firms"] = analyze_firms(polygon)
-                if use_modis:
-                    progress.progress(80, text="Consultando MODIS Burn Area...")
-                    results["modis"] = analyze_modis_burn(polygon)
-                if use_amazon:
-                    progress.progress(92, text="Consultando JRC Amazon...")
-                    results["amazon"] = analyze_jrc_amazon(polygon)
+        if analizar:
+            polygon = st.session_state["polygon"]
+            results = {"area_ha": area}
+            progress = st.progress(0, text="Iniciando análisis...")
 
-                progress.progress(100, text="¡Análisis completado!")
-                st.session_state["results"] = results
-                st.success("¡Listo! Ve a la pestaña **Mapa de alertas**")
+            if use_hansen:
+                progress.progress(15, text="Consultando Hansen...")
+                results["hansen"] = analyze_hansen(polygon, start_year - 2000, end_year - 2000)
+            if use_glad:
+                progress.progress(30, text="Consultando GLAD...")
+                results["glad"] = analyze_glad(polygon)
+            if use_jrc:
+                progress.progress(50, text="Consultando JRC...")
+                results["jrc"] = analyze_jrc_deforestation(polygon)
+            if use_firms:
+                progress.progress(65, text="Consultando FIRMS NASA...")
+                results["firms"] = analyze_firms(polygon)
+            if use_modis:
+                progress.progress(80, text="Consultando MODIS Burn Area...")
+                results["modis"] = analyze_modis_burn(polygon)
+            if use_amazon:
+                progress.progress(92, text="Consultando JRC Amazon...")
+                results["amazon"] = analyze_jrc_amazon(polygon)
 
+            progress.progress(100, text="¡Análisis completado!")
+            st.session_state["results"] = results
+            st.success("¡Listo! Ve a la pestaña **Mapa de alertas**")
 # ══════════════════════════════════════════════════════════
 # TAB 2 — MAPA DE ALERTAS + DASHBOARD
 # ══════════════════════════════════════════════════════════
