@@ -65,7 +65,7 @@ def analyze_hansen(polygon, start_year=1, end_year=25):
     # Pérdida total
     loss_mask = loss_year.gte(start_year).And(loss_year.lte(end_year))
     total_loss = area_img.updateMask(loss_mask).reduceRegion(
-        reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13
+        reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
     ).getInfo()
 
     # Por año
@@ -73,7 +73,7 @@ def analyze_hansen(polygon, start_year=1, end_year=25):
     for y in range(start_year, end_year + 1):
         year_mask = loss_year.eq(y)
         year_area = area_img.updateMask(year_mask).reduceRegion(
-            reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13
+            reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
         ).getInfo()
         area_ha = year_area.get("area", 0) or 0
         if area_ha > 0:
@@ -81,7 +81,7 @@ def analyze_hansen(polygon, start_year=1, end_year=25):
 
     # Ganancia forestal
     gain_area = area_img.updateMask(degradation).reduceRegion(
-        reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13
+        reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
     ).getInfo()
 
     # Imagen de pérdida para visualización en mapa
@@ -104,7 +104,7 @@ def analyze_glad(polygon):
         area_img = ee.Image.pixelArea().divide(10000)
         alert_mask = glad.gt(0)
         alert_area = area_img.updateMask(alert_mask).reduceRegion(
-            reducer=ee.Reducer.sum(), geometry=ee_geom, scale=10, maxPixels=1e13
+            reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
         ).getInfo()
         area_val = list(alert_area.values())[0] if alert_area else 0
         return {
@@ -133,10 +133,10 @@ def analyze_jrc_deforestation(polygon):
             defor_mask  = b.eq(3)
             degrad_mask = b.eq(2)
             da = area_img.updateMask(defor_mask).reduceRegion(
-                reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13
+                reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
             ).getInfo()
             dga = area_img.updateMask(degrad_mask).reduceRegion(
-                reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13
+                reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
             ).getInfo()
             dv  = list(da.values())[0]  if da  else 0
             dgv = list(dga.values())[0] if dga else 0
@@ -151,7 +151,7 @@ def analyze_jrc_deforestation(polygon):
                 # ... código existente ...
                 rg_mask = b.eq(4)  # clase 4 = regrowth
                 rga = area_img.updateMask(rg_mask).reduceRegion(
-                    reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13
+                    reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
                 ).getInfo()
                 rgv = list(rga.values())[0] if rga else 0
                 if (rgv or 0) > 0:
@@ -162,10 +162,10 @@ def analyze_jrc_deforestation(polygon):
         defor_mask  = band_latest.eq(3)
         degrad_mask = band_latest.eq(2)
         defor_total = area_img.updateMask(defor_mask).reduceRegion(
-            reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13
+            reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
         ).getInfo()
         degrad_total = area_img.updateMask(degrad_mask).reduceRegion(
-            reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13
+            reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
         ).getInfo()
 
         return {
@@ -201,7 +201,7 @@ def analyze_jrc_amazon(polygon):
         for name, cls in labels.items():
             mask = band.eq(cls)
             area = area_img.updateMask(mask).reduceRegion(
-                reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13
+                reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
             ).getInfo()
             val = list(area.values())[0] if area else 0
             results[name] = round(val or 0, 4)
@@ -222,7 +222,7 @@ def analyze_firms(polygon):
                 .select("T21").mosaic()
             fire_mask = firms.gt(300)
             fire_area = area_img.updateMask(fire_mask).reduceRegion(
-                reducer=ee.Reducer.sum(), geometry=ee_geom, scale=1000, maxPixels=1e13
+                reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
             ).getInfo()
             val = list(fire_area.values())[0] if fire_area else 0
             if (val or 0) > 0:
@@ -250,7 +250,7 @@ def analyze_modis_burn(polygon):
                 .select("BurnDate").mosaic()
             burn_mask = modis.gt(0)
             burn_area = area_img.updateMask(burn_mask).reduceRegion(
-                reducer=ee.Reducer.sum(), geometry=ee_geom, scale=500, maxPixels=1e13
+                reducer=ee.Reducer.sum(), geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
             ).getInfo()
             val = list(burn_area.values())[0] if burn_area else 0
             if (val or 0) > 0:
