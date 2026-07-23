@@ -3,12 +3,13 @@ import geopandas as gpd
 from shapely.geometry import mapping
 import os
 import json
+import streamlit as st
 
 GEE_PROJECT = 'ee-stephaniegeorge'
 
+@st.cache_resource(show_spinner="Conectando a Google Earth Engine...")
 def initialize_gee():
     try:
-        import streamlit as st
         project = st.secrets["gee"]["project"]
         creds_json = st.secrets["earthengine"]["credentials"]
         service_account = st.secrets["earthengine"]["service_account"]
@@ -25,6 +26,8 @@ def initialize_gee():
                 ee.Initialize(project=GEE_PROJECT)
                 return True
             except:
+                # No cachear un fallo: permite reintentar en el siguiente rerun.
+                initialize_gee.clear()
                 return False
 
 

@@ -1,0 +1,30 @@
+name: keep-alive
+
+# Mantiene despierta la app de Streamlit Community Cloud haciendo ping
+# periódico a su endpoint de salud, para evitar que se suspenda por inactividad.
+
+on:
+  schedule:
+    # Cada 10 minutos. Nota: los cron de GitHub Actions pueden retrasarse
+    # varios minutos bajo carga; 10 min da margen suficiente.
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}   # permite ejecutarlo manualmente desde la pestaña Actions
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping app
+        run: |
+          BASE="https://gggitraceabilitychangedetection-aybmsf56jsnbcygjxhs3cu.streamlit.app"
+          echo "Ping a $BASE"
+          # Endpoint de salud de Streamlit: ligero y suficiente para registrar tráfico.
+          curl -sS -m 30 --retry 3 --retry-delay 5 \
+               -A "keep-alive-bot" \
+               -o /dev/null -w "health -> HTTP %{http_code}\n" \
+               "$BASE/_stcore/health"
+          # También cargamos la raíz para asegurar que la sesión quede activa.
+          curl -sS -m 60 --retry 2 --retry-delay 5 \
+               -A "keep-alive-bot" \
+               -o /dev/null -w "root   -> HTTP %{http_code}\n" \
+               "$BASE/"
