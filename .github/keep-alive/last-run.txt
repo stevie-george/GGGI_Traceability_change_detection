@@ -1,0 +1,3 @@
+Marca de actividad automática del repositorio.
+Este archivo lo actualiza el workflow keep-repo-active cada semana
+para evitar que GitHub pause los workflows programados por inactividad.
