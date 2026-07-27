@@ -1,30 +1,29 @@
 name: keep-alive
 
-# Mantiene despierta la app de Streamlit Community Cloud haciendo ping
-# periódico a su endpoint de salud, para evitar que se suspenda por inactividad.
+# Mantiene despierta la app de Streamlit Community Cloud abriéndola con un
+# navegador real (Playwright). A diferencia de un ping HTTP, esto establece una
+# sesión de visor (websocket) que sí reinicia el temporizador de inactividad,
+# y si la app está dormida, pulsa el botón para reactivarla.
 
 on:
   schedule:
-    # Cada 10 minutos. Nota: los cron de GitHub Actions pueden retrasarse
-    # varios minutos bajo carga; 10 min da margen suficiente.
+    # Cada 10 minutos. Los cron de GitHub Actions pueden retrasarse bajo carga.
     - cron: "*/10 * * * *"
-  workflow_dispatch: {}   # permite ejecutarlo manualmente desde la pestaña Actions
+  workflow_dispatch: {}   # ejecución manual desde la pestaña Actions
 
 jobs:
   ping:
     runs-on: ubuntu-latest
+    # Imagen oficial de Playwright con los navegadores ya instalados.
+    container:
+      image: mcr.microsoft.com/playwright:v1.48.0-jammy
     steps:
-      - name: Ping app
-        run: |
-          BASE="https://gggitraceabilitychangedetection-aybmsf56jsnbcygjxhs3cu.streamlit.app"
-          echo "Ping a $BASE"
-          # Endpoint de salud de Streamlit: ligero y suficiente para registrar tráfico.
-          curl -sS -m 30 --retry 3 --retry-delay 5 \
-               -A "keep-alive-bot" \
-               -o /dev/null -w "health -> HTTP %{http_code}\n" \
-               "$BASE/_stcore/health"
-          # También cargamos la raíz para asegurar que la sesión quede activa.
-          curl -sS -m 60 --retry 2 --retry-delay 5 \
-               -A "keep-alive-bot" \
-               -o /dev/null -w "root   -> HTTP %{http_code}\n" \
-               "$BASE/"
+      - uses: actions/checkout@v4
+
+      - name: Instalar Playwright (versión que coincide con la imagen)
+        run: npm init -y >/dev/null 2>&1 && npm install playwright@1.48.0
+
+      - name: Abrir la app (sesión de navegador real)
+        env:
+          APP_URL: "https://gggitraceabilitychangedetection-aybmsf56jsnbcygjxhs3cu.streamlit.app/"
+        run: node .github/keep-alive/ping.mjs
