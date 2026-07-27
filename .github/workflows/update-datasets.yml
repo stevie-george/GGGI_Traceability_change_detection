@@ -1,0 +1,46 @@
+name: update-datasets
+
+# Revisa semanalmente si salió una versión más reciente de los datasets anuales
+# versionados (Hansen GFC, JRC TMF) y, de ser así, actualiza
+# modules/dataset_versions.json con un commit automático. Las fuentes casi en
+# tiempo real (FIRMS, MODIS, GLAD) NO necesitan esto: el código ya las consulta
+# hasta la fecha actual de forma dinámica.
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"   # cada lunes ~07:00 UTC
+  workflow_dispatch: {}     # ejecución manual desde la pestaña Actions
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar earthengine-api
+        run: pip install --quiet earthengine-api
+
+      - name: Buscar versiones más recientes
+        env:
+          GEE_SA_KEY: ${{ secrets.GEE_SA_KEY }}
+          GEE_PROJECT: ${{ secrets.GEE_PROJECT }}
+        run: python .github/scripts/update_datasets.py
+
+      - name: Commitear si hubo cambios
+        run: |
+          git config user.name  "dataset-updater-bot"
+          git config user.email "actions@github.com"
+          git add modules/dataset_versions.json
+          if git diff --staged --quiet; then
+            echo "Sin cambios que commitear."
+          else
+            git commit -m "chore: actualizar a la versión más reciente de dataset [skip ci]"
+            git push
+          fi

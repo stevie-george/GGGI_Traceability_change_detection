@@ -1,0 +1,5 @@
+{
+  "hansen_asset": "UMD/hansen/global_forest_change_2025_v1_13",
+  "jrc_tmf_year": 2023,
+  "_comment": "Versiones de datasets anuales versionados. Este archivo lo actualiza automaticamente .github/workflows/update-datasets.yml. hansen_asset = ID completo del Global Forest Change. jrc_tmf_year = anio de la version JRC TMF (define la ruta v1_YYYY y la banda DecYYYY)."
+}

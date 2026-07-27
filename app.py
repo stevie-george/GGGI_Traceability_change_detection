@@ -1,7 +1,10 @@
+import datetime
 import streamlit as st
 from streamlit_folium import st_folium
 import pandas as pd
 import plotly.graph_objects as go
+
+CURRENT_YEAR = datetime.date.today().year
 
 from modules.polygon_input import get_polygon_from_draw, get_polygon_from_file, get_polygon_from_coords
 from modules.gee_analysis import (initialize_gee, analyze_hansen, analyze_glad,
@@ -31,8 +34,8 @@ st.caption("Monitoreo para cultivos de aguacate y agave tequilana en México")
 with st.sidebar:
     st.header("⚙️ Configuración")
     cultivo    = st.selectbox("Cultivo", ["Aguacate", "Agave tequilana", "Otro"])
-    start_year = st.slider("Año inicio", 2001, 2023, 2015)
-    end_year   = st.slider("Año fin",    2001, 2023, 2023)
+    start_year = st.slider("Año inicio", 2001, CURRENT_YEAR, 2015)
+    end_year   = st.slider("Año fin",    2001, CURRENT_YEAR, CURRENT_YEAR)
 
     st.subheader("Fuentes de datos")
     use_hansen = st.checkbox("Hansen (pérdida forestal)", value=True)

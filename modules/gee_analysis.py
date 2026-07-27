@@ -3,9 +3,36 @@ import geopandas as gpd
 from shapely.geometry import mapping
 import os
 import json
+import datetime
 import streamlit as st
 
 GEE_PROJECT = 'ee-stephaniegeorge'
+
+# ── Versiones de datasets (actualizadas por el workflow update-datasets) ──────
+_VERSIONS_PATH = os.path.join(os.path.dirname(__file__), "dataset_versions.json")
+
+def _load_versions():
+    try:
+        with open(_VERSIONS_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+_VERSIONS = _load_versions()
+HANSEN_ASSET = _VERSIONS.get("hansen_asset", "UMD/hansen/global_forest_change_2025_v1_13")
+JRC_TMF_YEAR = int(_VERSIONS.get("jrc_tmf_year", 2023))
+JRC_TMF_COLLECTION = f"projects/JRC/TMF/v1_{JRC_TMF_YEAR}/AnnualChanges"
+
+# Primer año con datos consistentes para las series casi-en-tiempo-real.
+NRT_START_YEAR = 2015
+
+def current_year():
+    """Año actual, calculado en cada ejecución (no fijado a mano)."""
+    return datetime.date.today().year
+
+def _exclusive_end():
+    """Fin de rango exclusivo = mañana, para incluir todo lo disponible hasta hoy."""
+    return (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
 
 @st.cache_resource(show_spinner="Conectando a Google Earth Engine...")
 def initialize_gee():
@@ -81,7 +108,7 @@ def get_polygon_area_ha(polygon):
 
 def analyze_hansen(polygon, start_year=1, end_year=25):
     ee_geom = polygon_to_ee(polygon)
-    hansen = ee.Image("UMD/hansen/global_forest_change_2025_v1_13")
+    hansen = ee.Image(HANSEN_ASSET)
     loss_year = hansen.select("lossyear")
     gain = hansen.select("gain")
     area_img = ee.Image.pixelArea().divide(10000)
@@ -147,11 +174,11 @@ def analyze_glad(polygon):
 def analyze_jrc_deforestation(polygon):
     ee_geom = polygon_to_ee(polygon)
     try:
-        jrc = ee.ImageCollection("projects/JRC/TMF/v1_2023/AnnualChanges") \
+        jrc = ee.ImageCollection(JRC_TMF_COLLECTION) \
             .filterBounds(ee_geom).mosaic()
         area_img = ee.Image.pixelArea().divide(10000)
 
-        years = list(range(2015, 2024))
+        years = list(range(2015, JRC_TMF_YEAR + 1))
         by_year_defor   = []
         by_year_degrad  = []
         by_year_regrowth = []
@@ -191,7 +218,7 @@ def analyze_jrc_deforestation(polygon):
                 by_year_regrowth.append({"year": y, "area_ha": round(rgv or 0, 4)})
 
         # Totales banda más reciente
-        band_latest = jrc.select("Dec2023")
+        band_latest = jrc.select(f"Dec{JRC_TMF_YEAR}")
         defor_mask  = band_latest.eq(3)
         degrad_mask = band_latest.eq(2)
         defor_total = area_img.updateMask(defor_mask).reduceRegion(
@@ -225,10 +252,10 @@ def analyze_jrc_deforestation(polygon):
 def analyze_jrc_amazon(polygon):
     ee_geom = polygon_to_ee(polygon)
     try:
-        jrc = ee.ImageCollection("projects/JRC/TMF/v1_2023/AnnualChanges") \
+        jrc = ee.ImageCollection(JRC_TMF_COLLECTION) \
             .filterBounds(ee_geom).mosaic()
         area_img = ee.Image.pixelArea().divide(10000)
-        band = jrc.select("Dec2023")
+        band = jrc.select(f"Dec{JRC_TMF_YEAR}")
         results = {}
         labels = {
             "undisturbed_ha": 1,
@@ -255,10 +282,10 @@ def analyze_firms(polygon):
     try:
         area_img = ee.Image.pixelArea().divide(10000)
         by_year = []
-        for y in range(2015, 2024):
+        for y in range(NRT_START_YEAR, current_year() + 1):
             firms = ee.ImageCollection("FIRMS") \
                 .filterBounds(ee_geom) \
-                .filterDate(f"{y}-01-01", f"{y}-12-31") \
+                .filterDate(f"{y}-01-01", f"{y + 1}-01-01") \
                 .select("T21").mosaic()
             fire_mask = firms.gt(300)
             fire_area = area_img.updateMask(fire_mask).reduceRegion(
@@ -272,7 +299,7 @@ def analyze_firms(polygon):
         total = sum(r["area_ha"] for r in by_year)
         firms_full = ee.ImageCollection("FIRMS") \
             .filterBounds(ee_geom) \
-            .filterDate("2015-01-01", "2024-12-31") \
+            .filterDate(f"{NRT_START_YEAR}-01-01", _exclusive_end()) \
             .select("T21").mosaic()
         fire_img = firms_full.updateMask(firms_full.gt(300))
         return {"fire_area_ha": round(total, 4), "by_year": by_year, "fire_image": fire_img}
@@ -285,10 +312,10 @@ def analyze_modis_burn(polygon):
     try:
         area_img = ee.Image.pixelArea().divide(10000)
         by_year = []
-        for y in range(2015, 2024):
+        for y in range(NRT_START_YEAR, current_year() + 1):
             modis = ee.ImageCollection("MODIS/061/MCD64A1") \
                 .filterBounds(ee_geom) \
-                .filterDate(f"{y}-01-01", f"{y}-12-31") \
+                .filterDate(f"{y}-01-01", f"{y + 1}-01-01") \
                 .select("BurnDate").mosaic()
             burn_mask = modis.gt(0)
             burn_area = area_img.updateMask(burn_mask).reduceRegion(
@@ -302,7 +329,7 @@ def analyze_modis_burn(polygon):
         total = sum(r["area_ha"] for r in by_year)
         modis_full = ee.ImageCollection("MODIS/061/MCD64A1") \
             .filterBounds(ee_geom) \
-            .filterDate("2015-01-01", "2024-12-31") \
+            .filterDate(f"{NRT_START_YEAR}-01-01", _exclusive_end()) \
             .select("BurnDate").mosaic()
         burn_img = modis_full.updateMask(modis_full.gt(0))
         return {"burn_area_ha": round(total, 4), "by_year": by_year, "burn_image": burn_img}
