@@ -134,7 +134,7 @@ def generate_pdf(polygon_area_ha, hansen, glad, jrc, polygon_wkt,
     story = []
 
     # ── Portada ───────────────────────────────────────────────────────
-    story.append(Paragraph("Reporte de Alertas de Deforestación", title_style))
+    story.append(Paragraph("Sistema de Consenso en Pérdida de Cobertura", title_style))
     story.append(Paragraph(f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M')}",
                             styles["Normal"]))
     story.append(Spacer(1, 0.2*inch))

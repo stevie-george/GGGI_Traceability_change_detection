@@ -20,7 +20,7 @@ from modules.gee_analysis import (initialize_gee, analyze_hansen, analyze_glad,
 from modules.map_viewer import create_alert_map
 from modules.report_generator import generate_pdf, generate_excel
 
-st.set_page_config(page_title="Alertas Deforestación MX", page_icon="🌿", layout="wide")
+st.set_page_config(page_title="Sistema de Consenso en Pérdida de Cobertura", page_icon="🌿", layout="wide")
 
 st.markdown("""
     <style>
@@ -34,8 +34,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("# 🌿 Sistema de Alertas — Cero Deforestación")
-st.caption("Monitoreo para cultivos de aguacate y agave tequilana en México")
+st.markdown("# 🌿 Sistema de Consenso en Pérdida de Cobertura")
+st.caption("Consenso multi-fuente de pérdida de cobertura forestal — cultivos de aguacate y agave tequilana en México")
 
 with st.sidebar:
     st.header("⚙️ Configuración")
