@@ -105,11 +105,8 @@ with tab1:
     if "polygon" in st.session_state:
         st.divider()
         area = get_polygon_area_ha(st.session_state["polygon"])
-        col_a, col_b = st.columns([1, 3])
-        with col_a:
-            st.metric("Área", f"{area:,.2f} ha")
-        with col_b:
-            analizar = st.button("🔍 Analizar deforestación", type="primary", key="btn_analizar")
+        st.metric("Área", f"{area:,.2f} ha")
+        analizar = st.button("🔍 Analizar deforestación", type="primary", key="btn_analizar")
 
         if analizar:
             polygon = st.session_state["polygon"]
