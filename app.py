@@ -6,11 +6,17 @@ import plotly.graph_objects as go
 
 CURRENT_YEAR = datetime.date.today().year
 
+# Año de la versión de Hansen, extraído del ID del asset (p. ej. ..._2025_v1_13).
+try:
+    HANSEN_YEAR = int(HANSEN_ASSET.split("global_forest_change_")[1].split("_")[0])
+except (IndexError, ValueError):
+    HANSEN_YEAR = CURRENT_YEAR
+
 from modules.polygon_input import get_polygon_from_draw, get_polygon_from_file, get_polygon_from_coords
 from modules.gee_analysis import (initialize_gee, analyze_hansen, analyze_glad,
                                    analyze_jrc_deforestation, analyze_firms,
                                    analyze_modis_burn, analyze_jrc_amazon,
-                                   get_polygon_area_ha)
+                                   get_polygon_area_ha, HANSEN_ASSET, JRC_TMF_YEAR)
 from modules.map_viewer import create_alert_map
 from modules.report_generator import generate_pdf, generate_excel
 
@@ -355,7 +361,8 @@ with tab5:
         "Fuente":             ["Hansen GFC", "GLAD Alerts", "JRC TMF", "FIRMS NASA", "MODIS MCD64A1"],
         "Tipo":               ["Pérdida forestal", "Alertas", "Deforestación/Degradación", "Incendios activos", "Área quemada"],
         "Resolución":         ["30m", "10m", "30m", "1km", "500m"],
-        "Cobertura temporal": ["2000–2024", "2019–presente", "1990–2023", "2000–presente", "2000–presente"],
+        "Cobertura temporal": [f"2000–{HANSEN_YEAR}", "2019–presente", f"1990–{JRC_TMF_YEAR}",
+                               "2000–presente", "2000–presente"],
         "Estado":             ["✅ Activa", "✅ Activa", "✅ Activa", "✅ Activa", "✅ Activa"],
     }, use_container_width=True)
 
