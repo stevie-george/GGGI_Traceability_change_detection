@@ -4,14 +4,6 @@ from streamlit_folium import st_folium
 import pandas as pd
 import plotly.graph_objects as go
 
-CURRENT_YEAR = datetime.date.today().year
-
-# Año de la versión de Hansen, extraído del ID del asset (p. ej. ..._2025_v1_13).
-try:
-    HANSEN_YEAR = int(HANSEN_ASSET.split("global_forest_change_")[1].split("_")[0])
-except (IndexError, ValueError):
-    HANSEN_YEAR = CURRENT_YEAR
-
 from modules.polygon_input import get_polygon_from_draw, get_polygon_from_file, get_polygon_from_coords
 from modules.gee_analysis import (initialize_gee, analyze_hansen, analyze_glad,
                                    analyze_jrc_deforestation, analyze_firms,
@@ -19,6 +11,14 @@ from modules.gee_analysis import (initialize_gee, analyze_hansen, analyze_glad,
                                    get_polygon_area_ha, HANSEN_ASSET, JRC_TMF_YEAR)
 from modules.map_viewer import create_alert_map
 from modules.report_generator import generate_pdf, generate_excel
+
+CURRENT_YEAR = datetime.date.today().year
+
+# Año de la versión de Hansen, extraído del ID del asset (p. ej. ..._2025_v1_13).
+try:
+    HANSEN_YEAR = int(HANSEN_ASSET.split("global_forest_change_")[1].split("_")[0])
+except (IndexError, ValueError):
+    HANSEN_YEAR = CURRENT_YEAR
 
 st.set_page_config(page_title="Sistema de Consenso en Pérdida de Cobertura", page_icon="🌿", layout="wide")
 
