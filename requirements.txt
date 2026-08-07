@@ -1,14 +1,25 @@
+# ──────────────────────────────────────────────────────────────────────────
+# Versiones fijadas para un entorno REPRODUCIBLE.
+# Evita que Streamlit Cloud traiga versiones nuevas que rompan la app en cada
+# reconstrucción (fue lo que causó el error "Invalid GeoJSON" al actualizarse
+# earthengine-api). Conjunto estable vigente a 2026-08.
+# Para actualizar: sube los números de forma controlada y prueba un redeploy.
+# ──────────────────────────────────────────────────────────────────────────
 streamlit==1.56.0
-earthengine-api
-geemap
-folium
-streamlit-folium
-geopandas
-shapely
-fiona>=1.9.0
-pyproj
-reportlab
-openpyxl
-pandas
-numpy
-matplotlib
+earthengine-api==1.7.38
+geopandas==1.1.4
+shapely==2.1.2
+fiona==1.10.1
+pyproj==3.7.2
+folium==0.20.0
+streamlit-folium==0.27.4
+pandas==3.0.5
+numpy==2.5.1
+plotly==6.9.0
+matplotlib==3.11.1
+reportlab==5.0.0
+openpyxl==3.1.5
+
+# geemap NO se importa en el código actual; se deja fuera para acelerar el
+# arranque en frío (arrastra jupyter/ipyleaflet, muy pesado). Si en el futuro
+# lo necesitas, vuelve a agregarlo con una versión fija.
