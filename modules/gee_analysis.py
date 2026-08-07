@@ -97,11 +97,23 @@ def polygon_to_ee(polygon):
         if polygon.geom_type == "MultiPolygon":
             polygon = max(polygon.geoms, key=lambda p: p.area)
 
-    # ee.Geometry (versiones recientes de earthengine-api) rechaza las tuplas
-    # que devuelve shapely.mapping(); el round-trip por JSON las convierte en
-    # listas nativas, que es lo que exige la validación GeoJSON.
-    geo = json.loads(json.dumps(mapping(polygon)))
-    return ee.Geometry(geo)
+    # Asegura un Polígono simple antes de construir la geometría.
+    if polygon.geom_type == "MultiPolygon":
+        polygon = max(polygon.geoms, key=lambda p: p.area)
+
+    # earthengine-api (validación estricta) rechaza como "Invalid GeoJSON":
+    #   - tuplas (las que devuelve shapely.mapping)
+    #   - coordenadas con componente Z, p. ej. [x, y, z] (longitud impar)
+    # Por eso construimos los anillos manualmente forzando cada punto a
+    # exactamente [x, y] con floats nativos: 2D, sin tuplas, sin numpy.
+    def _ring_2d(coords):
+        return [[float(pt[0]), float(pt[1])] for pt in coords]
+
+    rings = [_ring_2d(polygon.exterior.coords)]
+    for interior in polygon.interiors:
+        rings.append(_ring_2d(interior.coords))
+
+    return ee.Geometry({"type": "Polygon", "coordinates": rings})
 
 
 def get_polygon_area_ha(polygon):
