@@ -167,10 +167,18 @@ def analyze_hansen(polygon, start_year=1, end_year=25):
 def analyze_glad(polygon):
     ee_geom = polygon_to_ee(polygon)
     try:
-        glad = ee.ImageCollection("projects/glad/alert/UpdResult") \
+        mosaic = ee.ImageCollection("projects/glad/alert/UpdResult") \
             .filterBounds(ee_geom) \
-            .select("alertDate25") \
             .mosaic()
+        # La banda de alertas lleva el año en el nombre (alertDate25, alertDate26…)
+        # y cambia cada año. En vez de fijarla, descubrimos la más reciente que
+        # exista para esta zona; así no se rompe al cambiar de año.
+        band_names = mosaic.bandNames().getInfo()
+        alert_bands = sorted([b for b in band_names if b.startswith("alertDate")])
+        if not alert_bands:
+            return {"alert_area_ha": 0, "alert_image": None, "by_year": [],
+                    "note": "Sin alertas GLAD para esta zona (cobertura enfocada en trópicos)."}
+        glad = mosaic.select(alert_bands[-1])
         area_img = ee.Image.pixelArea().divide(10000)
         alert_mask = glad.gt(0)
         alert_area = area_img.updateMask(alert_mask).reduceRegion(
