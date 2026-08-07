@@ -97,7 +97,11 @@ def polygon_to_ee(polygon):
         if polygon.geom_type == "MultiPolygon":
             polygon = max(polygon.geoms, key=lambda p: p.area)
 
-    return ee.Geometry(mapping(polygon))
+    # ee.Geometry (versiones recientes de earthengine-api) rechaza las tuplas
+    # que devuelve shapely.mapping(); el round-trip por JSON las convierte en
+    # listas nativas, que es lo que exige la validación GeoJSON.
+    geo = json.loads(json.dumps(mapping(polygon)))
+    return ee.Geometry(geo)
 
 
 def get_polygon_area_ha(polygon):
