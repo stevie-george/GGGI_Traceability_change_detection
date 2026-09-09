@@ -301,36 +301,6 @@ def analyze_jrc_amazon(polygon):
                 "deforested_ha": 0, "regrowth_ha": 0, "note": str(e)}
 
 
-def analyze_firms(polygon):
-    ee_geom = polygon_to_ee(polygon)
-    try:
-        area_img = ee.Image.pixelArea().divide(10000)
-        by_year = []
-        for y in range(NRT_START_YEAR, current_year() + 1):
-            firms = ee.ImageCollection("FIRMS") \
-                .filterBounds(ee_geom) \
-                .filterDate(f"{y}-01-01", f"{y + 1}-01-01") \
-                .select("T21").mosaic()
-            fire_mask = firms.gt(300)
-            fire_area = area_img.updateMask(fire_mask).reduceRegion(
-                reducer=ee.Reducer.sum(), geometry=ee_geom,
-                scale=1000, maxPixels=1e13, bestEffort=True
-            ).getInfo()
-            val = list(fire_area.values())[0] if fire_area else 0
-            if (val or 0) > 0:
-                by_year.append({"year": y, "area_ha": round(val or 0, 4)})
-
-        total = sum(r["area_ha"] for r in by_year)
-        firms_full = ee.ImageCollection("FIRMS") \
-            .filterBounds(ee_geom) \
-            .filterDate(f"{NRT_START_YEAR}-01-01", _exclusive_end()) \
-            .select("T21").mosaic()
-        fire_img = firms_full.updateMask(firms_full.gt(300))
-        return {"fire_area_ha": round(total, 4), "by_year": by_year, "fire_image": fire_img}
-    except Exception as e:
-        return {"fire_area_ha": 0, "by_year": [], "fire_image": None, "note": str(e)}
-
-
 def analyze_modis_burn(polygon):
     ee_geom = polygon_to_ee(polygon)
     try:

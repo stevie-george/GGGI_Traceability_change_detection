@@ -8,7 +8,6 @@ LAYER_STYLES = {
     "glad":       {"color": "#ff9933", "name": "GLAD — Alertas"},
     "jrc_defor":  {"color": "#cc66ff", "name": "JRC — Deforestación"},
     "jrc_degrad": {"color": "#ff6600", "name": "JRC — Degradación"},
-    "firms":      {"color": "#ffcc00", "name": "FIRMS — Incendios activos"},
     "modis":      {"color": "#ff3333", "name": "MODIS — Área quemada"},
 }
 
@@ -74,7 +73,6 @@ def create_alert_map(polygon, results=None, center=None):
         hansen = results.get("hansen", {})
         glad   = results.get("glad", {})
         jrc    = results.get("jrc", {})
-        firms  = results.get("firms", {})
         modis  = results.get("modis", {})
 
         if hansen.get("loss_image"):
@@ -98,11 +96,6 @@ def create_alert_map(polygon, results=None, center=None):
                 {"min": 1, "max": 1, "palette": ["ff6600"]})
             add_tile_layer(m, tile_url, LAYER_STYLES["jrc_degrad"]["name"], LAYER_STYLES["jrc_degrad"]["color"])
 
-        if firms.get("fire_image"):
-            tile_url = get_tile_url(firms["fire_image"],
-                {"min": 300, "max": 400, "palette": ["ffff00", "ff6600", "ff0000"]})
-            add_tile_layer(m, tile_url, LAYER_STYLES["firms"]["name"], LAYER_STYLES["firms"]["color"])
-
         if modis.get("burn_image"):
             tile_url = get_tile_url(modis["burn_image"],
                 {"min": 1, "max": 366, "palette": ["ffd700", "ff4500", "8b0000"]})
@@ -123,7 +116,6 @@ def create_alert_map(polygon, results=None, center=None):
             <span style="color:#ff9933; font-size:16px;">■</span>&nbsp; GLAD — alertas<br>
             <span style="color:#cc66ff; font-size:16px;">■</span>&nbsp; JRC — deforestación<br>
             <span style="color:#ff6600; font-size:16px;">■</span>&nbsp; JRC — degradación<br>
-            <span style="color:#ffcc00; font-size:16px;">■</span>&nbsp; FIRMS — incendios<br>
             <span style="color:#ff3333; font-size:16px;">■</span>&nbsp; MODIS — área quemada<br>
         </div>
     </div>

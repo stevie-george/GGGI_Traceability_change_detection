@@ -15,7 +15,6 @@ COLORS = {
     "GLAD":           "#e67e22",
     "JRC Defor":      "#8e44ad",
     "JRC Degrad":     "#d35400",
-    "FIRMS":          "#f39c12",
     "MODIS":          "#c0392b",
     "Regrowth":       "#27ae60",
     "Promedio Defor": "#2c3e50",
@@ -117,8 +116,7 @@ def make_comparative_section(story, heading_style, section_title,
 
 
 def generate_pdf(polygon_area_ha, hansen, glad, jrc, polygon_wkt,
-                 firms=None, modis=None):
-    firms = firms or {}
+                 modis=None):
     modis = modis or {}
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter,
@@ -152,7 +150,6 @@ def generate_pdf(polygon_area_ha, hansen, glad, jrc, polygon_wkt,
         ["JRC",      "Deforestación acumulada",   f"{jrc.get('deforestation_ha',0):,.4f}"],
         ["JRC",      "Degradación acumulada",     f"{jrc.get('degradation_ha',0):,.4f}"],
         ["JRC",      "Regrowth acumulado",        f"{jrc.get('regrowth_ha',0):,.4f}"],
-        ["FIRMS",    "Incendios activos",          f"{firms.get('fire_area_ha',0):,.4f}"],
         ["MODIS",    "Área quemada",              f"{modis.get('burn_area_ha',0):,.4f}"],
         ["Hansen",   "% área afectada",           f"{pct:.2f}%"],
     ], [1.3*inch, 2.7*inch, 2*inch]))
@@ -167,7 +164,6 @@ def generate_pdf(polygon_area_ha, hansen, glad, jrc, polygon_wkt,
         ("JRC — deforestación anual",     jrc.get("by_year_defor", []),      "JRC Defor"),
         ("JRC — degradación anual",       jrc.get("by_year_degrad", []),     "JRC Degrad"),
         ("JRC — regrowth anual",          jrc.get("by_year_regrowth", []),   "Regrowth"),
-        ("FIRMS — incendios anuales",     firms.get("by_year", []),          "FIRMS"),
         ("MODIS — área quemada anual",    modis.get("by_year", []),          "MODIS"),
     ]
     for title, rows, ds_name in bar_configs:
@@ -201,14 +197,13 @@ def generate_pdf(polygon_area_ha, hansen, glad, jrc, polygon_wkt,
         regrowth_datasets, "Promedio"
     )
 
-    # ── 5. Comparativa incendios ──────────────────────────────────────
+    # ── 5. Área quemada ───────────────────────────────────────────────
     fire_datasets = {
-        "FIRMS": rows_to_dict(firms.get("by_year", [])),
         "MODIS": rows_to_dict(modis.get("by_year", [])),
     }
     make_comparative_section(
         story, heading_style,
-        "5. Comparativa anual — incendios y área quemada",
+        "5. Área quemada anual (MODIS)",
         fire_datasets, "Promedio Fuego"
     )
 
@@ -222,8 +217,7 @@ def generate_pdf(polygon_area_ha, hansen, glad, jrc, polygon_wkt,
     return buffer
 
 
-def generate_excel(polygon_area_ha, hansen, glad, jrc, firms=None, modis=None):
-    firms = firms or {}
+def generate_excel(polygon_area_ha, hansen, glad, jrc, modis=None):
     modis = modis or {}
     buffer = io.BytesIO()
 
@@ -237,7 +231,6 @@ def generate_excel(polygon_area_ha, hansen, glad, jrc, firms=None, modis=None):
             "JRC deforestación (ha)": jrc.get("deforestation_ha", 0),
             "JRC degradación (ha)":   jrc.get("degradation_ha", 0),
             "JRC regrowth (ha)":      jrc.get("regrowth_ha", 0),
-            "FIRMS incendios (ha)":   firms.get("fire_area_ha", 0),
             "MODIS quemado (ha)":     modis.get("burn_area_ha", 0),
             "% área afectada":        round(hansen.get("total_loss_ha", 0) /
                                             polygon_area_ha * 100, 2)
@@ -274,27 +267,12 @@ def generate_excel(polygon_area_ha, hansen, glad, jrc, firms=None, modis=None):
                           for y, v in rg.items()]).to_excel(
                 writer, sheet_name="Regrowth", index=False)
 
-        # Comparativa incendios
-        fire_ds = {
-            "FIRMS": rows_to_dict(firms.get("by_year", [])),
-            "MODIS": rows_to_dict(modis.get("by_year", [])),
-        }
-        fire_ds = {k: v for k, v in fire_ds.items() if v}
-        all_years_f = sorted(set(y for d in fire_ds.values() for y in d.keys()))
-        if all_years_f:
-            rows = []
-            for y in all_years_f:
-                row = {"Año": y}
-                vals = []
-                for ds in fire_ds:
-                    v = fire_ds[ds].get(y, 0)
-                    row[ds] = v
-                    vals.append(v)
-                row["Promedio Fuego"] = round(sum(vals) / len(vals), 4)
-                rows.append(row)
-            cols = ["Año"] + list(fire_ds.keys()) + ["Promedio Fuego"]
-            pd.DataFrame(rows)[cols].to_excel(
-                writer, sheet_name="Comparativa incendios", index=False)
+        # Área quemada (MODIS)
+        burn = rows_to_dict(modis.get("by_year", []))
+        if burn:
+            pd.DataFrame([{"Año": y, "Área quemada (ha)": v}
+                          for y, v in burn.items()]).to_excel(
+                writer, sheet_name="Área quemada MODIS", index=False)
 
         # Hojas individuales
         for sheet_name, rows in [
@@ -302,7 +280,6 @@ def generate_excel(polygon_area_ha, hansen, glad, jrc, firms=None, modis=None):
             ("JRC defor anual",  jrc.get("by_year_defor", [])),
             ("JRC degrad anual", jrc.get("by_year_degrad", [])),
             ("JRC regrowth",     jrc.get("by_year_regrowth", [])),
-            ("FIRMS anual",      firms.get("by_year", [])),
             ("MODIS anual",      modis.get("by_year", [])),
         ]:
             if rows:

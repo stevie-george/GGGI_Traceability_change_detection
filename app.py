@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 
 from modules.polygon_input import get_polygon_from_draw, get_polygon_from_file, get_polygon_from_coords
 from modules.gee_analysis import (initialize_gee, analyze_hansen, analyze_glad,
-                                   analyze_jrc_deforestation, analyze_firms,
+                                   analyze_jrc_deforestation,
                                    analyze_modis_burn, analyze_jrc_amazon,
                                    get_polygon_area_ha, HANSEN_ASSET, JRC_TMF_YEAR)
 from modules.map_viewer import create_alert_map
@@ -47,7 +47,6 @@ with st.sidebar:
     use_hansen = st.checkbox("Hansen (pérdida forestal)", value=True)
     use_glad   = st.checkbox("GLAD (alertas)", value=True)
     use_jrc    = st.checkbox("JRC (deforestación + degradación)", value=True)
-    use_firms  = st.checkbox("FIRMS NASA (incendios activos)", value=True)
     use_modis  = st.checkbox("MODIS (área quemada)", value=True)
     use_amazon = st.checkbox("JRC Amazon (regrowth 2023)", value=False)
 
@@ -122,9 +121,6 @@ with tab1:
             if use_jrc:
                 progress.progress(50, text="Consultando JRC...")
                 results["jrc"] = analyze_jrc_deforestation(polygon)
-            if use_firms:
-                progress.progress(65, text="Consultando FIRMS NASA...")
-                results["firms"] = analyze_firms(polygon)
             if use_modis:
                 progress.progress(80, text="Consultando MODIS Burn Area...")
                 results["modis"] = analyze_modis_burn(polygon)
@@ -145,7 +141,6 @@ with tab2:
         hansen  = results.get("hansen", {})
         glad    = results.get("glad", {})
         jrc     = results.get("jrc", {})
-        firms   = results.get("firms", {})
         modis   = results.get("modis", {})
         amazon  = results.get("amazon", {})
 
@@ -175,11 +170,10 @@ with tab2:
 
         # Fila 2 — Alertas e incendios
         st.markdown("**🔥 Alertas e incendios**")
-        col6, col7, col8, col9 = st.columns(4)
+        col6, col7, col8 = st.columns(3)
         col6.metric("GLAD alertas",    f"{glad.get('alert_area_ha', 0):,.2f} ha",  delta_color="inverse")
-        col7.metric("FIRMS incendios", f"{firms.get('fire_area_ha', 0):,.2f} ha",  delta_color="inverse")
-        col8.metric("MODIS quemado",   f"{modis.get('burn_area_ha', 0):,.2f} ha",  delta_color="inverse")
-        col9.metric("JRC regrowth",    f"{jrc.get('regrowth_ha', 0):,.2f} ha",     delta_color="normal")
+        col7.metric("MODIS quemado",   f"{modis.get('burn_area_ha', 0):,.2f} ha",  delta_color="inverse")
+        col8.metric("JRC regrowth",    f"{jrc.get('regrowth_ha', 0):,.2f} ha",     delta_color="normal")
 
         # Fila 3 — JRC Amazon (si disponible)
         if amazon:
@@ -231,19 +225,11 @@ with tab2:
                 st.info("Sin datos anuales disponibles.")
 
         with col_right:
-            st.markdown("### 🔥 Incendios y área quemada")
-            firms_by_year = {r["year"]: r["area_ha"] for r in firms.get("by_year", [])}
+            st.markdown("### 🔥 Área quemada")
             modis_by_year = {r["year"]: r["area_ha"] for r in modis.get("by_year", [])}
-            all_years_fire = sorted(set(
-                list(firms_by_year.keys()) +
-                list(modis_by_year.keys())
-            ))
+            all_years_fire = sorted(modis_by_year.keys())
             if all_years_fire:
                 fig2 = go.Figure()
-                fig2.add_trace(go.Bar(
-                    x=all_years_fire, y=[firms_by_year.get(y, 0) for y in all_years_fire],
-                    name="FIRMS — incendios", marker_color="#ffcc00", opacity=0.85
-                ))
                 fig2.add_trace(go.Bar(
                     x=all_years_fire, y=[modis_by_year.get(y, 0) for y in all_years_fire],
                     name="MODIS — área quemada", marker_color="#ff3333", opacity=0.85
@@ -259,7 +245,7 @@ with tab2:
             else:
                 st.info("Sin datos de incendios disponibles.")
 
-        for source, data in [("GLAD", glad), ("JRC", jrc), ("FIRMS", firms), ("MODIS", modis)]:
+        for source, data in [("GLAD", glad), ("JRC", jrc), ("MODIS", modis)]:
             if data.get("note"):
                 st.warning(f"⚠️ {source}: {data['note']}")
     else:
@@ -276,18 +262,17 @@ with tab3:
         hansen  = results.get("hansen", {})
         glad    = results.get("glad", {})
         jrc     = results.get("jrc", {})
-        firms   = results.get("firms", {})
         modis   = results.get("modis", {})
 
         col1, col2 = st.columns(2)
         with col1:
             if st.button("📄 Generar PDF"):
-                pdf = generate_pdf(results["area_ha"], hansen, glad, jrc, polygon.wkt, firms, modis)
+                pdf = generate_pdf(results["area_ha"], hansen, glad, jrc, polygon.wkt, modis)
                 st.download_button("⬇️ Descargar PDF", pdf,
                                    "reporte_deforestacion.pdf", "application/pdf")
         with col2:
             if st.button("📊 Generar Excel"):
-                excel = generate_excel(results["area_ha"], hansen, glad, jrc, firms, modis)
+                excel = generate_excel(results["area_ha"], hansen, glad, jrc, modis)
                 st.download_button("⬇️ Descargar Excel", excel,
                                    "reporte_deforestacion.xlsx",
                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -355,12 +340,12 @@ with tab5:
 
     st.markdown("### Fuentes de deforestación activas")
     st.dataframe({
-        "Fuente":             ["Hansen GFC", "GLAD Alerts", "JRC TMF", "FIRMS NASA", "MODIS MCD64A1"],
-        "Tipo":               ["Pérdida forestal", "Alertas", "Deforestación/Degradación", "Incendios activos", "Área quemada"],
-        "Resolución":         ["30m", "10m", "30m", "1km", "500m"],
+        "Fuente":             ["Hansen GFC", "GLAD Alerts", "JRC TMF", "MODIS MCD64A1"],
+        "Tipo":               ["Pérdida forestal", "Alertas", "Deforestación/Degradación", "Área quemada"],
+        "Resolución":         ["30m", "10m", "30m", "500m"],
         "Cobertura temporal": [f"2000–{HANSEN_YEAR}", "2019–presente", f"1990–{JRC_TMF_YEAR}",
-                               "2000–presente", "2000–presente"],
-        "Estado":             ["✅ Activa", "✅ Activa", "✅ Activa", "✅ Activa", "✅ Activa"],
+                               "2000–presente"],
+        "Estado":             ["✅ Activa", "✅ Activa", "✅ Activa", "✅ Activa"],
     }, use_container_width=True)
 
     st.divider()
@@ -418,20 +403,20 @@ with tab6:
     st.divider()
     st.markdown("### Métricas de precisión por fuente (pendiente)")
     st.dataframe({
-        "Fuente":                   ["Hansen GFC", "GLAD Alerts", "JRC TMF", "FIRMS NASA", "MODIS MCD64A1"],
-        "Precisión global (OA)":    ["—", "—", "—", "—", "—"],
-        "Precisión productor (PA)": ["—", "—", "—", "—", "—"],
-        "Precisión usuario (UA)":   ["—", "—", "—", "—", "—"],
-        "F1-Score":                 ["—", "—", "—", "—", "—"],
-        "N puntos validados":       ["0", "0", "0", "0", "0"],
-        "Última actualización":     ["Pendiente"] * 5,
+        "Fuente":                   ["Hansen GFC", "GLAD Alerts", "JRC TMF", "MODIS MCD64A1"],
+        "Precisión global (OA)":    ["—", "—", "—", "—"],
+        "Precisión productor (PA)": ["—", "—", "—", "—"],
+        "Precisión usuario (UA)":   ["—", "—", "—", "—"],
+        "F1-Score":                 ["—", "—", "—", "—"],
+        "N puntos validados":       ["0", "0", "0", "0"],
+        "Última actualización":     ["Pendiente"] * 4,
     }, use_container_width=True)
 
     st.divider()
     st.markdown("### Matriz de confusión")
     col1, col2 = st.columns(2)
     with col1:
-        st.selectbox("Fuente a validar", ["Hansen GFC", "GLAD Alerts", "JRC TMF", "FIRMS NASA", "MODIS MCD64A1"])
+        st.selectbox("Fuente a validar", ["Hansen GFC", "GLAD Alerts", "JRC TMF", "MODIS MCD64A1"])
         st.selectbox("Período de validación", ["2015–2020", "2020–2023", "2023–2024"])
         st.number_input("N puntos de validación", min_value=0, value=0)
     with col2:
