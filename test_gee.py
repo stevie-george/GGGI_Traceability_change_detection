@@ -1,5 +1,5 @@
 import ee
-ee.Initialize(project='ee-stephaniegeorge')
+ee.Initialize(project='lulcc-traceability-mx40')
 
 # JRC GFC2020 V3 (versión actualizada)
 try:

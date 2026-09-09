@@ -289,10 +289,12 @@ with tab4:
     st.markdown("### Estado actual de conexión")
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("Proyecto GEE activo", "ee-stephaniegeorge")
+        st.metric("Proyecto GEE activo",
+                  st.secrets.get("gee", {}).get("project", "—"))
         st.metric("Estado de conexión", "Conectado ✓" if gee_ok else "Desconectado ✗")
     with col2:
-        st.metric("Service Account", "gee-streamlit@ee-stephaniegeorge")
+        st.metric("Service Account",
+                  st.secrets.get("earthengine", {}).get("service_account", "—"))
         st.metric("Tier", "Contributor")
 
     st.divider()

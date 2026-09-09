@@ -11,7 +11,7 @@ import datetime
 import ee
 
 SA_KEY = os.environ.get("GEE_SA_KEY", "").strip()
-PROJECT = os.environ.get("GEE_PROJECT", "ee-stephaniegeorge").strip()
+PROJECT = os.environ.get("GEE_PROJECT", "lulcc-traceability-mx40").strip()
 
 if not SA_KEY:
     raise SystemExit("Falta GEE_SA_KEY (secreto del repositorio).")

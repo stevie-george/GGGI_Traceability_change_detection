@@ -6,7 +6,7 @@ import json
 import datetime
 import streamlit as st
 
-GEE_PROJECT = 'ee-stephaniegeorge'
+GEE_PROJECT = 'lulcc-traceability-mx40'
 
 # ── Versiones de datasets (actualizadas por el workflow update-datasets) ──────
 _VERSIONS_PATH = os.path.join(os.path.dirname(__file__), "dataset_versions.json")
