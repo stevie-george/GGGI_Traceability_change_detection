@@ -1,0 +1,333 @@
+week,monday,state_cve,state,tile_id,consultant,consultant_id
+1,2026-09-07,14,Jalisco,r000c012,tona,1
+1,2026-09-07,14,Jalisco,r000c014,tona,1
+1,2026-09-07,14,Jalisco,r002c004,tona,1
+1,2026-09-07,14,Jalisco,r002c006,tona,1
+1,2026-09-07,14,Jalisco,r002c008,tona,1
+1,2026-09-07,14,Jalisco,r002c010,tona,1
+1,2026-09-07,14,Jalisco,r002c012,tona,1
+1,2026-09-07,14,Jalisco,r002c014,tona,1
+1,2026-09-07,14,Jalisco,r002c016,tona,1
+1,2026-09-07,14,Jalisco,r004c006,tona,1
+1,2026-09-07,14,Jalisco,r004c008,tona,1
+1,2026-09-07,14,Jalisco,r004c010,tona,1
+1,2026-09-07,14,Jalisco,r004c012,mau,2
+1,2026-09-07,14,Jalisco,r004c014,mau,2
+1,2026-09-07,14,Jalisco,r006c000,mau,2
+1,2026-09-07,14,Jalisco,r006c002,mau,2
+1,2026-09-07,14,Jalisco,r006c004,mau,2
+1,2026-09-07,14,Jalisco,r006c006,rodrigo,3
+1,2026-09-07,14,Jalisco,r006c008,rodrigo,3
+1,2026-09-07,14,Jalisco,r006c010,rodrigo,3
+1,2026-09-07,14,Jalisco,r006c012,rodrigo,3
+1,2026-09-07,14,Jalisco,r006c014,rodrigo,3
+2,2026-09-14,14,Jalisco,r008c000,tona,1
+2,2026-09-14,14,Jalisco,r008c002,tona,1
+2,2026-09-14,14,Jalisco,r008c004,tona,1
+2,2026-09-14,14,Jalisco,r008c006,tona,1
+2,2026-09-14,14,Jalisco,r008c008,tona,1
+2,2026-09-14,14,Jalisco,r008c010,tona,1
+2,2026-09-14,14,Jalisco,r008c012,tona,1
+2,2026-09-14,14,Jalisco,r008c014,tona,1
+2,2026-09-14,14,Jalisco,r008c016,tona,1
+2,2026-09-14,14,Jalisco,r008c018,tona,1
+2,2026-09-14,14,Jalisco,r010c002,tona,1
+2,2026-09-14,14,Jalisco,r010c004,tona,1
+2,2026-09-14,14,Jalisco,r010c006,mau,2
+2,2026-09-14,14,Jalisco,r010c008,mau,2
+2,2026-09-14,14,Jalisco,r010c010,mau,2
+2,2026-09-14,14,Jalisco,r010c012,mau,2
+2,2026-09-14,14,Jalisco,r010c014,mau,2
+2,2026-09-14,14,Jalisco,r010c016,rodrigo,3
+2,2026-09-14,14,Jalisco,r010c018,rodrigo,3
+2,2026-09-14,14,Jalisco,r012c008,rodrigo,3
+2,2026-09-14,14,Jalisco,r012c010,rodrigo,3
+2,2026-09-14,14,Jalisco,r012c014,rodrigo,3
+3,2026-09-21,14,Jalisco,r012c016,tona,1
+3,2026-09-21,14,Jalisco,r012c018,tona,1
+3,2026-09-21,14,Jalisco,r012c020,tona,1
+3,2026-09-21,14,Jalisco,r014c010,tona,1
+3,2026-09-21,14,Jalisco,r014c016,tona,1
+3,2026-09-21,14,Jalisco,r014c018,tona,1
+3,2026-09-21,14,Jalisco,r014c020,tona,1
+3,2026-09-21,14,Jalisco,r016c008,tona,1
+3,2026-09-21,14,Jalisco,r016c010,tona,1
+3,2026-09-21,14,Jalisco,r016c012,tona,1
+3,2026-09-21,14,Jalisco,r016c018,tona,1
+3,2026-09-21,14,Jalisco,r016c020,tona,1
+3,2026-09-21,14,Jalisco,r018c008,mau,2
+3,2026-09-21,14,Jalisco,r018c010,mau,2
+3,2026-09-21,14,Jalisco,r018c012,mau,2
+3,2026-09-21,14,Jalisco,r020c008,mau,2
+3,2026-09-21,14,Jalisco,r020c010,mau,2
+3,2026-09-21,16,Michoacan,16_r000c004,rodrigo,3
+3,2026-09-21,16,Michoacan,16_r000c006,rodrigo,3
+3,2026-09-21,16,Michoacan,16_r000c008,rodrigo,3
+3,2026-09-21,16,Michoacan,16_r002c000,rodrigo,3
+3,2026-09-21,16,Michoacan,16_r002c002,rodrigo,3
+4,2026-09-28,16,Michoacan,16_r002c004,tona,1
+4,2026-09-28,16,Michoacan,16_r002c006,tona,1
+4,2026-09-28,16,Michoacan,16_r002c008,tona,1
+4,2026-09-28,16,Michoacan,16_r002c014,tona,1
+4,2026-09-28,16,Michoacan,16_r002c016,tona,1
+4,2026-09-28,16,Michoacan,16_r004c000,tona,1
+4,2026-09-28,16,Michoacan,16_r004c002,tona,1
+4,2026-09-28,16,Michoacan,16_r004c004,tona,1
+4,2026-09-28,16,Michoacan,16_r004c006,tona,1
+4,2026-09-28,16,Michoacan,16_r004c008,tona,1
+4,2026-09-28,16,Michoacan,16_r004c010,tona,1
+4,2026-09-28,16,Michoacan,16_r004c012,tona,1
+4,2026-09-28,16,Michoacan,16_r004c014,mau,2
+4,2026-09-28,16,Michoacan,16_r004c016,mau,2
+4,2026-09-28,16,Michoacan,16_r006c002,mau,2
+4,2026-09-28,16,Michoacan,16_r006c004,mau,2
+4,2026-09-28,16,Michoacan,16_r006c006,mau,2
+4,2026-09-28,16,Michoacan,16_r006c008,rodrigo,3
+4,2026-09-28,16,Michoacan,16_r006c010,rodrigo,3
+4,2026-09-28,16,Michoacan,16_r006c012,rodrigo,3
+4,2026-09-28,16,Michoacan,16_r006c014,rodrigo,3
+4,2026-09-28,16,Michoacan,16_r006c016,rodrigo,3
+5,2026-10-05,16,Michoacan,16_r008c006,tona,1
+5,2026-10-05,16,Michoacan,16_r008c008,tona,1
+5,2026-10-05,16,Michoacan,16_r008c010,tona,1
+5,2026-10-05,16,Michoacan,16_r008c012,tona,1
+5,2026-10-05,16,Michoacan,16_r008c014,tona,1
+5,2026-10-05,16,Michoacan,16_r008c016,tona,1
+5,2026-10-05,16,Michoacan,16_r008c018,tona,1
+5,2026-10-05,16,Michoacan,16_r010c004,tona,1
+5,2026-10-05,16,Michoacan,16_r010c006,tona,1
+5,2026-10-05,16,Michoacan,16_r010c008,tona,1
+5,2026-10-05,16,Michoacan,16_r010c010,tona,1
+5,2026-10-05,16,Michoacan,16_r010c012,tona,1
+5,2026-10-05,16,Michoacan,16_r010c014,mau,2
+5,2026-10-05,16,Michoacan,16_r010c016,mau,2
+5,2026-10-05,16,Michoacan,16_r010c018,mau,2
+5,2026-10-05,16,Michoacan,16_r012c004,mau,2
+5,2026-10-05,16,Michoacan,16_r012c006,mau,2
+5,2026-10-05,16,Michoacan,16_r012c008,rodrigo,3
+5,2026-10-05,16,Michoacan,16_r012c010,rodrigo,3
+5,2026-10-05,16,Michoacan,16_r012c012,rodrigo,3
+5,2026-10-05,16,Michoacan,16_r012c014,rodrigo,3
+5,2026-10-05,16,Michoacan,16_r012c018,rodrigo,3
+6,2026-10-12,18,Nayarit,18_r000c006,tona,1
+6,2026-10-12,18,Nayarit,18_r000c012,tona,1
+6,2026-10-12,18,Nayarit,18_r002c006,tona,1
+6,2026-10-12,18,Nayarit,18_r002c008,tona,1
+6,2026-10-12,18,Nayarit,18_r002c010,tona,1
+6,2026-10-12,18,Nayarit,18_r002c012,tona,1
+6,2026-10-12,18,Nayarit,18_r004c000,tona,1
+6,2026-10-12,18,Nayarit,18_r004c002,tona,1
+6,2026-10-12,18,Nayarit,18_r004c008,tona,1
+6,2026-10-12,18,Nayarit,18_r004c010,tona,1
+6,2026-10-12,18,Nayarit,18_r004c012,tona,1
+6,2026-10-12,18,Nayarit,18_r004c014,tona,1
+6,2026-10-12,18,Nayarit,18_r006c000,mau,2
+6,2026-10-12,18,Nayarit,18_r006c004,mau,2
+6,2026-10-12,18,Nayarit,18_r006c006,mau,2
+6,2026-10-12,18,Nayarit,18_r006c008,mau,2
+6,2026-10-12,18,Nayarit,18_r006c010,mau,2
+6,2026-10-12,18,Nayarit,18_r006c012,rodrigo,3
+6,2026-10-12,18,Nayarit,18_r006c014,rodrigo,3
+6,2026-10-12,18,Nayarit,18_r008c006,rodrigo,3
+6,2026-10-12,18,Nayarit,18_r008c008,rodrigo,3
+6,2026-10-12,18,Nayarit,18_r008c010,rodrigo,3
+7,2026-10-19,18,Nayarit,18_r008c012,tona,1
+7,2026-10-19,18,Nayarit,18_r010c004,tona,1
+7,2026-10-19,18,Nayarit,18_r010c006,tona,1
+7,2026-10-19,18,Nayarit,18_r010c008,tona,1
+7,2026-10-19,18,Nayarit,18_r010c010,tona,1
+7,2026-10-19,18,Nayarit,18_r010c012,tona,1
+7,2026-10-19,18,Nayarit,18_r012c006,tona,1
+7,2026-10-19,18,Nayarit,18_r012c008,tona,1
+7,2026-10-19,06,Colima,06_r000c056,tona,1
+7,2026-10-19,06,Colima,06_r000c057,tona,1
+7,2026-10-19,06,Colima,06_r000c058,tona,1
+7,2026-10-19,06,Colima,06_r001c000,tona,1
+7,2026-10-19,06,Colima,06_r001c019,mau,2
+7,2026-10-19,06,Colima,06_r001c020,mau,2
+7,2026-10-19,06,Colima,06_r001c054,mau,2
+7,2026-10-19,06,Colima,06_r001c055,mau,2
+7,2026-10-19,06,Colima,06_r001c056,mau,2
+7,2026-10-19,06,Colima,06_r001c057,rodrigo,3
+7,2026-10-19,06,Colima,06_r001c058,rodrigo,3
+7,2026-10-19,06,Colima,06_r001c059,rodrigo,3
+7,2026-10-19,06,Colima,06_r002c019,rodrigo,3
+7,2026-10-19,06,Colima,06_r002c020,rodrigo,3
+8,2026-10-26,06,Colima,06_r002c053,tona,1
+8,2026-10-26,06,Colima,06_r002c054,tona,1
+8,2026-10-26,06,Colima,06_r002c055,tona,1
+8,2026-10-26,06,Colima,06_r002c056,tona,1
+8,2026-10-26,06,Colima,06_r002c057,tona,1
+8,2026-10-26,06,Colima,06_r002c058,tona,1
+8,2026-10-26,06,Colima,06_r002c059,tona,1
+8,2026-10-26,06,Colima,06_r003c014,tona,1
+8,2026-10-26,06,Colima,06_r003c053,tona,1
+8,2026-10-26,06,Colima,06_r003c054,tona,1
+8,2026-10-26,06,Colima,06_r003c055,tona,1
+8,2026-10-26,06,Colima,06_r003c056,tona,1
+8,2026-10-26,06,Colima,06_r003c057,mau,2
+8,2026-10-26,06,Colima,06_r003c058,mau,2
+8,2026-10-26,06,Colima,06_r003c059,mau,2
+8,2026-10-26,06,Colima,06_r004c021,mau,2
+8,2026-10-26,06,Colima,06_r004c056,mau,2
+8,2026-10-26,06,Colima,06_r004c057,rodrigo,3
+8,2026-10-26,06,Colima,06_r004c058,rodrigo,3
+8,2026-10-26,06,Colima,06_r004c059,rodrigo,3
+8,2026-10-26,11,Guanajuato,11_r000c004,rodrigo,3
+8,2026-10-26,11,Guanajuato,11_r000c006,rodrigo,3
+9,2026-11-02,11,Guanajuato,11_r000c008,tona,1
+9,2026-11-02,11,Guanajuato,11_r002c000,tona,1
+9,2026-11-02,11,Guanajuato,11_r002c002,tona,1
+9,2026-11-02,11,Guanajuato,11_r002c004,tona,1
+9,2026-11-02,11,Guanajuato,11_r002c006,tona,1
+9,2026-11-02,11,Guanajuato,11_r002c008,tona,1
+9,2026-11-02,11,Guanajuato,11_r004c000,tona,1
+9,2026-11-02,11,Guanajuato,11_r004c002,tona,1
+9,2026-11-02,11,Guanajuato,11_r004c004,tona,1
+9,2026-11-02,11,Guanajuato,11_r004c006,tona,1
+9,2026-11-02,11,Guanajuato,11_r004c008,tona,1
+9,2026-11-02,11,Guanajuato,11_r006c000,tona,1
+10,2026-11-09,11,Guanajuato,11_r006c002,tona,1
+10,2026-11-09,11,Guanajuato,11_r006c004,tona,1
+10,2026-11-09,11,Guanajuato,11_r006c006,tona,1
+10,2026-11-09,11,Guanajuato,11_r006c008,tona,1
+10,2026-11-09,11,Guanajuato,11_r006c010,tona,1
+10,2026-11-09,11,Guanajuato,11_r008c002,tona,1
+10,2026-11-09,11,Guanajuato,11_r008c004,tona,1
+10,2026-11-09,11,Guanajuato,11_r008c006,tona,1
+10,2026-11-09,11,Guanajuato,11_r008c008,tona,1
+10,2026-11-09,11,Guanajuato,11_r008c010,tona,1
+10,2026-11-09,11,Guanajuato,11_r010c002,tona,1
+10,2026-11-09,11,Guanajuato,11_r010c004,tona,1
+11,2026-11-16,01,Aguascalientes,01_r000c000,tona,1
+11,2026-11-16,01,Aguascalientes,01_r000c001,tona,1
+11,2026-11-16,01,Aguascalientes,01_r000c002,tona,1
+11,2026-11-16,01,Aguascalientes,01_r000c003,tona,1
+11,2026-11-16,01,Aguascalientes,01_r000c004,tona,1
+11,2026-11-16,01,Aguascalientes,01_r001c000,tona,1
+11,2026-11-16,01,Aguascalientes,01_r001c001,tona,1
+11,2026-11-16,01,Aguascalientes,01_r001c002,tona,1
+11,2026-11-16,01,Aguascalientes,01_r001c003,tona,1
+11,2026-11-16,01,Aguascalientes,01_r001c004,tona,1
+11,2026-11-16,01,Aguascalientes,01_r001c005,tona,1
+11,2026-11-16,01,Aguascalientes,01_r002c000,tona,1
+12,2026-11-23,01,Aguascalientes,01_r002c001,tona,1
+12,2026-11-23,01,Aguascalientes,01_r002c002,tona,1
+12,2026-11-23,01,Aguascalientes,01_r002c003,tona,1
+12,2026-11-23,01,Aguascalientes,01_r002c004,tona,1
+12,2026-11-23,01,Aguascalientes,01_r002c005,tona,1
+12,2026-11-23,01,Aguascalientes,01_r003c001,tona,1
+12,2026-11-23,01,Aguascalientes,01_r003c002,tona,1
+12,2026-11-23,01,Aguascalientes,01_r003c003,tona,1
+12,2026-11-23,01,Aguascalientes,01_r003c004,tona,1
+12,2026-11-23,01,Aguascalientes,01_r004c002,tona,1
+12,2026-11-23,01,Aguascalientes,01_r004c003,tona,1
+12,2026-11-23,32,Zacatecas,32_r000c004,tona,1
+13,2026-11-30,32,Zacatecas,32_r000c006,tona,1
+13,2026-11-30,32,Zacatecas,32_r002c004,tona,1
+13,2026-11-30,32,Zacatecas,32_r002c006,tona,1
+13,2026-11-30,32,Zacatecas,32_r002c008,tona,1
+13,2026-11-30,32,Zacatecas,32_r004c004,tona,1
+13,2026-11-30,32,Zacatecas,32_r004c006,tona,1
+13,2026-11-30,32,Zacatecas,32_r004c014,tona,1
+13,2026-11-30,32,Zacatecas,32_r006c002,tona,1
+13,2026-11-30,32,Zacatecas,32_r006c004,tona,1
+13,2026-11-30,32,Zacatecas,32_r006c006,tona,1
+13,2026-11-30,32,Zacatecas,32_r006c008,tona,1
+13,2026-11-30,32,Zacatecas,32_r006c012,tona,1
+14,2026-12-07,32,Zacatecas,32_r006c014,tona,1
+14,2026-12-07,32,Zacatecas,32_r008c000,tona,1
+14,2026-12-07,32,Zacatecas,32_r008c002,tona,1
+14,2026-12-07,32,Zacatecas,32_r008c004,tona,1
+14,2026-12-07,32,Zacatecas,32_r008c006,tona,1
+14,2026-12-07,32,Zacatecas,32_r008c008,tona,1
+14,2026-12-07,32,Zacatecas,32_r008c010,tona,1
+14,2026-12-07,32,Zacatecas,32_r008c012,tona,1
+14,2026-12-07,32,Zacatecas,32_r008c014,tona,1
+14,2026-12-07,32,Zacatecas,32_r010c000,tona,1
+14,2026-12-07,32,Zacatecas,32_r010c002,tona,1
+14,2026-12-07,32,Zacatecas,32_r010c004,tona,1
+15,2026-12-14,32,Zacatecas,32_r010c006,tona,1
+15,2026-12-14,32,Zacatecas,32_r010c008,tona,1
+15,2026-12-14,32,Zacatecas,32_r010c010,tona,1
+15,2026-12-14,32,Zacatecas,32_r012c002,tona,1
+15,2026-12-14,32,Zacatecas,32_r012c004,tona,1
+15,2026-12-14,32,Zacatecas,32_r012c006,tona,1
+15,2026-12-14,32,Zacatecas,32_r012c008,tona,1
+15,2026-12-14,32,Zacatecas,32_r012c010,tona,1
+15,2026-12-14,32,Zacatecas,32_r012c012,tona,1
+15,2026-12-14,32,Zacatecas,32_r014c002,tona,1
+15,2026-12-14,32,Zacatecas,32_r014c004,tona,1
+15,2026-12-14,32,Zacatecas,32_r014c006,tona,1
+16,2026-12-21,32,Zacatecas,32_r014c008,tona,1
+16,2026-12-21,32,Zacatecas,32_r014c010,tona,1
+16,2026-12-21,32,Zacatecas,32_r014c012,tona,1
+16,2026-12-21,32,Zacatecas,32_r014c014,tona,1
+16,2026-12-21,32,Zacatecas,32_r016c002,tona,1
+16,2026-12-21,32,Zacatecas,32_r016c004,tona,1
+16,2026-12-21,32,Zacatecas,32_r016c006,tona,1
+16,2026-12-21,32,Zacatecas,32_r016c008,tona,1
+16,2026-12-21,32,Zacatecas,32_r016c010,tona,1
+16,2026-12-21,32,Zacatecas,32_r016c012,tona,1
+16,2026-12-21,32,Zacatecas,32_r016c014,tona,1
+16,2026-12-21,32,Zacatecas,32_r016c016,tona,1
+17,2026-12-28,32,Zacatecas,32_r018c004,tona,1
+17,2026-12-28,32,Zacatecas,32_r018c006,tona,1
+17,2026-12-28,32,Zacatecas,32_r018c008,tona,1
+17,2026-12-28,32,Zacatecas,32_r018c010,tona,1
+17,2026-12-28,32,Zacatecas,32_r018c012,tona,1
+17,2026-12-28,32,Zacatecas,32_r018c014,tona,1
+17,2026-12-28,32,Zacatecas,32_r018c016,tona,1
+17,2026-12-28,32,Zacatecas,32_r018c018,tona,1
+17,2026-12-28,32,Zacatecas,32_r020c010,tona,1
+17,2026-12-28,32,Zacatecas,32_r020c012,tona,1
+17,2026-12-28,32,Zacatecas,32_r020c014,tona,1
+17,2026-12-28,32,Zacatecas,32_r020c016,tona,1
+18,2027-01-04,32,Zacatecas,32_r022c008,tona,1
+18,2027-01-04,32,Zacatecas,32_r022c010,tona,1
+18,2027-01-04,32,Zacatecas,32_r022c012,tona,1
+18,2027-01-04,24,San Luis Potosi,24_r000c016,tona,1
+18,2027-01-04,24,San Luis Potosi,24_r000c018,tona,1
+18,2027-01-04,24,San Luis Potosi,24_r002c006,tona,1
+18,2027-01-04,24,San Luis Potosi,24_r002c008,tona,1
+18,2027-01-04,24,San Luis Potosi,24_r002c010,tona,1
+18,2027-01-04,24,San Luis Potosi,24_r002c012,tona,1
+18,2027-01-04,24,San Luis Potosi,24_r002c014,tona,1
+18,2027-01-04,24,San Luis Potosi,24_r002c016,tona,1
+18,2027-01-04,24,San Luis Potosi,24_r002c018,tona,1
+19,2027-01-11,24,San Luis Potosi,24_r004c004,tona,1
+19,2027-01-11,24,San Luis Potosi,24_r004c006,tona,1
+19,2027-01-11,24,San Luis Potosi,24_r004c008,tona,1
+19,2027-01-11,24,San Luis Potosi,24_r004c010,tona,1
+19,2027-01-11,24,San Luis Potosi,24_r004c012,tona,1
+19,2027-01-11,24,San Luis Potosi,24_r004c014,tona,1
+19,2027-01-11,24,San Luis Potosi,24_r004c016,tona,1
+19,2027-01-11,24,San Luis Potosi,24_r004c018,tona,1
+19,2027-01-11,24,San Luis Potosi,24_r006c004,tona,1
+19,2027-01-11,24,San Luis Potosi,24_r006c006,tona,1
+19,2027-01-11,24,San Luis Potosi,24_r006c008,tona,1
+19,2027-01-11,24,San Luis Potosi,24_r006c010,tona,1
+20,2027-01-18,24,San Luis Potosi,24_r006c012,tona,1
+20,2027-01-18,24,San Luis Potosi,24_r006c014,tona,1
+20,2027-01-18,24,San Luis Potosi,24_r006c016,tona,1
+20,2027-01-18,24,San Luis Potosi,24_r006c018,tona,1
+20,2027-01-18,24,San Luis Potosi,24_r006c020,tona,1
+20,2027-01-18,24,San Luis Potosi,24_r008c000,tona,1
+20,2027-01-18,24,San Luis Potosi,24_r008c002,tona,1
+20,2027-01-18,24,San Luis Potosi,24_r008c004,tona,1
+20,2027-01-18,24,San Luis Potosi,24_r008c006,tona,1
+20,2027-01-18,24,San Luis Potosi,24_r008c008,tona,1
+20,2027-01-18,24,San Luis Potosi,24_r008c010,tona,1
+20,2027-01-18,24,San Luis Potosi,24_r008c012,tona,1
+21,2027-01-25,24,San Luis Potosi,24_r008c014,tona,1
+21,2027-01-25,24,San Luis Potosi,24_r010c000,tona,1
+21,2027-01-25,24,San Luis Potosi,24_r010c002,tona,1
+21,2027-01-25,24,San Luis Potosi,24_r010c004,tona,1
+21,2027-01-25,24,San Luis Potosi,24_r010c006,tona,1
+21,2027-01-25,24,San Luis Potosi,24_r010c008,tona,1
+21,2027-01-25,24,San Luis Potosi,24_r010c010,tona,1
+21,2027-01-25,24,San Luis Potosi,24_r012c000,tona,1
+21,2027-01-25,24,San Luis Potosi,24_r012c002,tona,1
+21,2027-01-25,24,San Luis Potosi,24_r012c004,tona,1
+21,2027-01-25,24,San Luis Potosi,24_r012c006,tona,1
+21,2027-01-25,24,San Luis Potosi,24_r012c008,tona,1

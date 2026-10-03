@@ -5,3 +5,27 @@ __pycache__/
 .ipynb_checkpoints/
 assets/tmp/
 .streamlit/secrets.toml
+
+# ---- COBIOCOM LULC: datos y artefactos pesados (viven en SSD/disco, no en git) ----
+# Tiles Sentinel-2 (junction al SSD), caché de escenas
+cobiocom_lulc/out/
+cobiocom_lulc/out
+# Salidas de inferencia y mosaicos
+cobiocom_lulc/maps/
+cobiocom_lulc/mosaics/
+# Modelos versionados + tablas (grandes; respaldo en disco)
+cobiocom_lulc/entrenamientos/
+cobiocom_lulc/*.parquet
+cobiocom_lulc/*.pkl
+cobiocom_lulc/rf_confusion.png
+cobiocom_lulc/rf_importances.png
+cobiocom_lulc/maps/preview_rf.png
+# Proyecto QGIS / renders grandes
+cobiocom_lulc/*.qgz
+cobiocom_lulc/*.tif
+# Validación: respaldos pesados (los CSV chicos sí se versionan)
+cobiocom_lulc/validation/_viejo/
+cobiocom_lulc/validation/*.gpkg
+# Paquetes a consultores (bundles + zips, grandes)
+cobiocom_labeling_*/
+cobiocom_labeling_*.zip

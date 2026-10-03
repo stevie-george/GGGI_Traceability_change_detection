@@ -1,0 +1,20 @@
+# pip fallback — prefer environment.yml (conda-forge) on Windows for GDAL libs.
+# If you must use pip, install GDAL/rasterio via conda first, then:
+numpy
+geopandas>=1.0
+pyogrio
+rasterio>=1.3
+rioxarray
+odc-stac
+pystac-client
+planetary-computer
+stackstac
+xarray>=2024.1
+dask
+shapely
+scikit-learn
+lightgbm
+leafmap
+localtileserver
+matplotlib
+tqdm
