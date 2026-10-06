@@ -51,7 +51,7 @@ with st.sidebar:
     use_modis  = st.checkbox("MODIS (área quemada)", value=True)
     use_amazon = st.checkbox("JRC Amazon (regrowth 2023)", value=False)
 
-    st.subheader("Clasificación propia")
+    st.subheader("Clasificación RandomForest")
     use_lulc   = st.checkbox("COBIOCOM LULC — Jalisco 2025", value=True,
                              help="Clasificación de uso/cobertura (incluye aguacate y agave). "
                                   "Solo tiene datos dentro de Jalisco.")
