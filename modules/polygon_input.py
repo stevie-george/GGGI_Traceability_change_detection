@@ -39,6 +39,25 @@ def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
         edit_options={"edit": True, "remove": True}
     ).add_to(m)
 
+    # Capas COBIOCOM LULC como overlays: se controlan desde el MISMO control de
+    # capas (no agrega botones de Streamlit). Apagadas por defecto.
+    try:
+        from modules.gee_analysis import get_lulc_tile_urls
+        _lulc = get_lulc_tile_urls()
+        for key, col, label, op in [
+            ("class",    "#8e24aa", "COBIOCOM — Clasificación LULC", 0.75),
+            ("aguacate", "#004d40", "COBIOCOM — Aguacate", 1.0),
+            ("agave",    "#8e24aa", "COBIOCOM — Agave", 1.0),
+        ]:
+            if _lulc.get(key):
+                folium.TileLayer(
+                    tiles=_lulc[key], attr="COBIOCOM LULC",
+                    name=f'<span style="color:{col}">■</span> {label}',
+                    overlay=True, control=True, show=False, opacity=op, max_zoom=21
+                ).add_to(m)
+    except Exception:
+        pass
+
     folium.LayerControl(collapsed=False).add_to(m)
     plugins.Fullscreen(position="topleft").add_to(m)
 

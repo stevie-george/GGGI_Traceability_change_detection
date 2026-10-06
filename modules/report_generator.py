@@ -116,8 +116,9 @@ def make_comparative_section(story, heading_style, section_title,
 
 
 def generate_pdf(polygon_area_ha, hansen, glad, jrc, polygon_wkt,
-                 modis=None):
+                 modis=None, lulc=None):
     modis = modis or {}
+    lulc = lulc or {}
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter,
                             rightMargin=0.75*inch, leftMargin=0.75*inch,
@@ -141,7 +142,7 @@ def generate_pdf(polygon_area_ha, hansen, glad, jrc, polygon_wkt,
     pct = round(hansen.get("total_loss_ha", 0) / polygon_area_ha * 100, 2) \
           if polygon_area_ha > 0 else 0
     story.append(Paragraph("1. Resumen ejecutivo", heading_style))
-    story.append(styled_table([
+    sr = [
         ["Fuente", "Indicador", "Área (ha)"],
         ["Polígono", "Área total",               f"{polygon_area_ha:,.2f}"],
         ["Hansen",   "Pérdida forestal",          f"{hansen.get('total_loss_ha',0):,.4f}"],
@@ -151,8 +152,12 @@ def generate_pdf(polygon_area_ha, hansen, glad, jrc, polygon_wkt,
         ["JRC",      "Degradación acumulada",     f"{jrc.get('degradation_ha',0):,.4f}"],
         ["JRC",      "Regrowth acumulado",        f"{jrc.get('regrowth_ha',0):,.4f}"],
         ["MODIS",    "Área quemada",              f"{modis.get('burn_area_ha',0):,.4f}"],
-        ["Hansen",   "% área afectada",           f"{pct:.2f}%"],
-    ], [1.3*inch, 2.7*inch, 2*inch]))
+    ]
+    if lulc.get("by_class"):
+        sr.append(["COBIOCOM", "Aguacate (clasificación)", f"{lulc.get('aguacate_ha',0):,.4f}"])
+        sr.append(["COBIOCOM", "Agave (clasificación)",    f"{lulc.get('agave_ha',0):,.4f}"])
+    sr.append(["Hansen", "% área afectada", f"{pct:.2f}%"])
+    story.append(styled_table(sr, [1.3*inch, 2.7*inch, 2*inch]))
     story.append(Spacer(1, 0.2*inch))
 
     # ── 2. Gráficas de barras ─────────────────────────────────────────
@@ -207,8 +212,19 @@ def generate_pdf(polygon_area_ha, hansen, glad, jrc, polygon_wkt,
         fire_datasets, "Promedio Fuego"
     )
 
-    # ── 6. Geometría ─────────────────────────────────────────────────
-    story.append(Paragraph("6. Geometría del polígono (WKT)", heading_style))
+    # ── 6. Clasificación COBIOCOM LULC (si cae dentro del área) ───────
+    lulc_rows = [c for c in lulc.get("by_class", []) if c.get("area_ha", 0) > 0]
+    if lulc_rows:
+        story.append(Paragraph("6. Clasificación COBIOCOM LULC (Jalisco 2025)", heading_style))
+        tbl = [["Clase", "Área (ha)", "% del polígono"]]
+        for c in lulc_rows:
+            pctc = round(c["area_ha"] / polygon_area_ha * 100, 2) if polygon_area_ha else 0
+            tbl.append([c["name"], f"{c['area_ha']:,.4f}", f"{pctc:.2f}%"])
+        story.append(styled_table(tbl, [2.7*inch, 1.8*inch, 1.5*inch]))
+        story.append(Spacer(1, 0.2*inch))
+
+    # ── 7. Geometría ─────────────────────────────────────────────────
+    story.append(Paragraph("7. Geometría del polígono (WKT)", heading_style))
     story.append(Paragraph(
         f"<font size=7>{polygon_wkt[:600]}...</font>", styles["Normal"]))
 
@@ -217,13 +233,14 @@ def generate_pdf(polygon_area_ha, hansen, glad, jrc, polygon_wkt,
     return buffer
 
 
-def generate_excel(polygon_area_ha, hansen, glad, jrc, modis=None):
+def generate_excel(polygon_area_ha, hansen, glad, jrc, modis=None, lulc=None):
     modis = modis or {}
+    lulc = lulc or {}
     buffer = io.BytesIO()
 
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
         # Resumen
-        pd.DataFrame([{
+        resumen = {
             "Área polígono (ha)":     polygon_area_ha,
             "Hansen pérdida (ha)":    hansen.get("total_loss_ha", 0),
             "Hansen ganancia (ha)":   hansen.get("gain_ha", 0),
@@ -235,7 +252,20 @@ def generate_excel(polygon_area_ha, hansen, glad, jrc, modis=None):
             "% área afectada":        round(hansen.get("total_loss_ha", 0) /
                                             polygon_area_ha * 100, 2)
                                       if polygon_area_ha > 0 else 0,
-        }]).to_excel(writer, sheet_name="Resumen", index=False)
+        }
+        if lulc.get("by_class"):
+            resumen["Aguacate COBIOCOM (ha)"] = lulc.get("aguacate_ha", 0)
+            resumen["Agave COBIOCOM (ha)"]    = lulc.get("agave_ha", 0)
+        pd.DataFrame([resumen]).to_excel(writer, sheet_name="Resumen", index=False)
+
+        # Clasificación COBIOCOM LULC (clases dentro del área)
+        lulc_rows = [c for c in lulc.get("by_class", []) if c.get("area_ha", 0) > 0]
+        if lulc_rows:
+            pd.DataFrame([{
+                "Clase": c["name"],
+                "Área (ha)": round(c["area_ha"], 4),
+                "% polígono": round(c["area_ha"] / polygon_area_ha * 100, 2) if polygon_area_ha else 0,
+            } for c in lulc_rows]).to_excel(writer, sheet_name="COBIOCOM LULC", index=False)
 
         # Comparativa deforestación
         defor_ds = {

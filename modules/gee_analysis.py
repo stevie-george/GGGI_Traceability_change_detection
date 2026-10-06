@@ -23,6 +23,13 @@ HANSEN_ASSET = _VERSIONS.get("hansen_asset", "UMD/hansen/global_forest_change_20
 JRC_TMF_YEAR = int(_VERSIONS.get("jrc_tmf_year", 2023))
 JRC_TMF_COLLECTION = f"projects/JRC/TMF/v1_{JRC_TMF_YEAR}/AnnualChanges"
 
+# Año de la versión de Hansen (p. ej. ..._2025_v1_13 → 2025); define el máximo
+# de la rampa de color "por año" en el mapa.
+try:
+    HANSEN_YEAR = int(HANSEN_ASSET.split("global_forest_change_")[1].split("_")[0])
+except (IndexError, ValueError):
+    HANSEN_YEAR = datetime.date.today().year
+
 # Primer año con datos consistentes para las series casi-en-tiempo-real.
 NRT_START_YEAR = 2015
 
@@ -395,3 +402,27 @@ def get_tile_url(image, vis_params):
         return map_id['tile_fetcher'].url_format
     except:
         return None
+
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def get_lulc_tile_urls():
+    """URLs de tiles (GEE) de las capas LULC para mostrarlas como overlays en
+    cualquier mapa (p. ej. el mapa de inicio): clasificación completa, aguacate
+    y agave. El asset es estático → se cachea 1 h. Si falla (asset no subido o
+    GEE sin iniciar) devuelve None y no cachea el fallo."""
+    try:
+        img = ee.Image(LULC_ASSET)
+        class_img = img.remap(LULC_IDS, list(range(len(LULC_IDS))))
+        urls = {
+            "class":    get_tile_url(class_img,
+                        {"min": 0, "max": len(LULC_PALETTE) - 1, "palette": LULC_PALETTE}),
+            "aguacate": get_tile_url(img.eq(LULC_AGUACATE_ID).selfMask(),
+                        {"min": 1, "max": 1, "palette": ["004d40"]}),
+            "agave":    get_tile_url(img.eq(LULC_AGAVE_ID).selfMask(),
+                        {"min": 1, "max": 1, "palette": ["8e24aa"]}),
+        }
+    except Exception:
+        urls = {"class": None, "aguacate": None, "agave": None}
+    if not urls.get("class"):
+        get_lulc_tile_urls.clear()   # no cachear un fallo transitorio
+    return urls

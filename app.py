@@ -9,17 +9,11 @@ from modules.gee_analysis import (initialize_gee, analyze_hansen, analyze_glad,
                                    analyze_jrc_deforestation,
                                    analyze_modis_burn, analyze_jrc_amazon,
                                    analyze_lulc,
-                                   get_polygon_area_ha, HANSEN_ASSET, JRC_TMF_YEAR)
+                                   get_polygon_area_ha, HANSEN_YEAR, JRC_TMF_YEAR)
 from modules.map_viewer import create_alert_map
 from modules.report_generator import generate_pdf, generate_excel
 
 CURRENT_YEAR = datetime.date.today().year
-
-# Año de la versión de Hansen, extraído del ID del asset (p. ej. ..._2025_v1_13).
-try:
-    HANSEN_YEAR = int(HANSEN_ASSET.split("global_forest_change_")[1].split("_")[0])
-except (IndexError, ValueError):
-    HANSEN_YEAR = CURRENT_YEAR
 
 st.set_page_config(page_title="Sistema de Consenso en Pérdida de Cobertura", page_icon="🌿", layout="wide")
 
@@ -298,16 +292,17 @@ with tab3:
         glad    = results.get("glad", {})
         jrc     = results.get("jrc", {})
         modis   = results.get("modis", {})
+        lulc    = results.get("lulc", {})
 
         col1, col2 = st.columns(2)
         with col1:
             if st.button("📄 Generar PDF"):
-                pdf = generate_pdf(results["area_ha"], hansen, glad, jrc, polygon.wkt, modis)
+                pdf = generate_pdf(results["area_ha"], hansen, glad, jrc, polygon.wkt, modis, lulc)
                 st.download_button("⬇️ Descargar PDF", pdf,
                                    "reporte_deforestacion.pdf", "application/pdf")
         with col2:
             if st.button("📊 Generar Excel"):
-                excel = generate_excel(results["area_ha"], hansen, glad, jrc, modis)
+                excel = generate_excel(results["area_ha"], hansen, glad, jrc, modis, lulc)
                 st.download_button("⬇️ Descargar Excel", excel,
                                    "reporte_deforestacion.xlsx",
                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

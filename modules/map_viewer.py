@@ -2,7 +2,12 @@ import folium
 import folium.plugins as plugins
 import json
 from shapely.geometry import mapping
-from modules.gee_analysis import LULC_PALETTE, LULC_CLASSES
+from modules.gee_analysis import LULC_PALETTE, LULC_CLASSES, HANSEN_YEAR
+
+# Rampa temporal para Hansen: años antiguos en frío (azul) → recientes en
+# cálido (rojo), para leer el "año de pérdida" de un vistazo.
+HANSEN_YEAR_PALETTE = ["4575b4", "74add1", "abd9e9", "e0f3f8", "fee090",
+                       "fdae61", "f46d43", "d73027", "a50026"]
 
 LAYER_STYLES = {
     "hansen":     {"color": "#ff4d4d", "name": "Hansen — Pérdida forestal"},
@@ -15,7 +20,7 @@ LAYER_STYLES = {
     "agave":      {"color": "#8e24aa", "name": "COBIOCOM — Agave"},
 }
 
-def add_tile_layer(m, tile_url, name, color):
+def add_tile_layer(m, tile_url, name, color, opacity=1.0, show=True):
     if tile_url:
         folium.TileLayer(
             tiles=tile_url,
@@ -23,9 +28,9 @@ def add_tile_layer(m, tile_url, name, color):
             name=f'<span style="color:{color}">■</span> {name}',
             overlay=True,
             control=True,
-            opacity=0.8,
+            opacity=opacity,
+            show=show,
             max_zoom=21,
-            max_native_zoom=12
         ).add_to(m)
 
 def create_alert_map(polygon, results=None, center=None):
@@ -35,13 +40,7 @@ def create_alert_map(polygon, results=None, center=None):
 
     m = folium.Map(location=center, zoom_start=12, tiles=None)
 
-    # Basemaps
-    folium.TileLayer(
-        tiles="CartoDB positron",
-        name="CartoDB Positron",
-        overlay=False, control=True
-    ).add_to(m)
-
+    # Basemaps (Google Satellite = base por defecto)
     folium.TileLayer(
         tiles="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
         attr="Google Satellite",
@@ -80,47 +79,56 @@ def create_alert_map(polygon, results=None, center=None):
         modis  = results.get("modis", {})
         lulc   = results.get("lulc", {})
 
+        # Encendidas por defecto: Hansen y JRC. Las demás quedan en el control
+        # de capas, apagadas.
         if hansen.get("loss_image"):
             tile_url = get_tile_url(hansen["loss_image"],
-                {"min": 1, "max": 24,
-                 "palette": ["ffffcc", "fed976", "fd8d3c", "e31a1c", "800026"]})
-            add_tile_layer(m, tile_url, LAYER_STYLES["hansen"]["name"], LAYER_STYLES["hansen"]["color"])
+                {"min": 1, "max": max(HANSEN_YEAR - 2000, 2), "palette": HANSEN_YEAR_PALETTE})
+            add_tile_layer(m, tile_url, LAYER_STYLES["hansen"]["name"],
+                           LAYER_STYLES["hansen"]["color"], show=True)
 
         if glad.get("alert_image"):
             tile_url = get_tile_url(glad["alert_image"],
                 {"min": 1, "max": 365, "palette": ["ff9933", "ff4500"]})
-            add_tile_layer(m, tile_url, LAYER_STYLES["glad"]["name"], LAYER_STYLES["glad"]["color"])
+            add_tile_layer(m, tile_url, LAYER_STYLES["glad"]["name"],
+                           LAYER_STYLES["glad"]["color"], show=False)
 
         if jrc.get("defor_image"):
             tile_url = get_tile_url(jrc["defor_image"],
                 {"min": 1, "max": 1, "palette": ["cc66ff"]})
-            add_tile_layer(m, tile_url, LAYER_STYLES["jrc_defor"]["name"], LAYER_STYLES["jrc_defor"]["color"])
+            add_tile_layer(m, tile_url, LAYER_STYLES["jrc_defor"]["name"],
+                           LAYER_STYLES["jrc_defor"]["color"], show=True)
 
         if jrc.get("degrad_image"):
             tile_url = get_tile_url(jrc["degrad_image"],
                 {"min": 1, "max": 1, "palette": ["ff6600"]})
-            add_tile_layer(m, tile_url, LAYER_STYLES["jrc_degrad"]["name"], LAYER_STYLES["jrc_degrad"]["color"])
+            add_tile_layer(m, tile_url, LAYER_STYLES["jrc_degrad"]["name"],
+                           LAYER_STYLES["jrc_degrad"]["color"], show=True)
 
         if modis.get("burn_image"):
             tile_url = get_tile_url(modis["burn_image"],
                 {"min": 1, "max": 366, "palette": ["ffd700", "ff4500", "8b0000"]})
-            add_tile_layer(m, tile_url, LAYER_STYLES["modis"]["name"], LAYER_STYLES["modis"]["color"])
+            add_tile_layer(m, tile_url, LAYER_STYLES["modis"]["name"],
+                           LAYER_STYLES["modis"]["color"], show=False)
 
-        # ── Capas COBIOCOM LULC (sobreponibles) ──────────────────────────
+        # ── Capas COBIOCOM LULC (sobreponibles, apagadas por defecto) ─────
         if lulc.get("class_image"):
             tile_url = get_tile_url(lulc["class_image"],
                 {"min": 0, "max": len(LULC_PALETTE) - 1, "palette": LULC_PALETTE})
-            add_tile_layer(m, tile_url, LAYER_STYLES["lulc"]["name"], LAYER_STYLES["lulc"]["color"])
+            add_tile_layer(m, tile_url, LAYER_STYLES["lulc"]["name"],
+                           LAYER_STYLES["lulc"]["color"], opacity=0.75, show=False)
 
         if lulc.get("aguacate_image"):
             tile_url = get_tile_url(lulc["aguacate_image"],
                 {"min": 1, "max": 1, "palette": ["004d40"]})
-            add_tile_layer(m, tile_url, LAYER_STYLES["aguacate"]["name"], LAYER_STYLES["aguacate"]["color"])
+            add_tile_layer(m, tile_url, LAYER_STYLES["aguacate"]["name"],
+                           LAYER_STYLES["aguacate"]["color"], show=False)
 
         if lulc.get("agave_image"):
             tile_url = get_tile_url(lulc["agave_image"],
                 {"min": 1, "max": 1, "palette": ["8e24aa"]})
-            add_tile_layer(m, tile_url, LAYER_STYLES["agave"]["name"], LAYER_STYLES["agave"]["color"])
+            add_tile_layer(m, tile_url, LAYER_STYLES["agave"]["name"],
+                           LAYER_STYLES["agave"]["color"], show=False)
 
     # Leyenda — clases LULC generadas desde la leyenda real (aguacate/agave en negrita)
     lulc_rows = ""
@@ -141,7 +149,9 @@ def create_alert_map(polygon, results=None, center=None):
                     padding-bottom:4px;">🗺️ Leyenda</div>
         <div style="color:#fff;">
             <span style="color:#2ecc71; font-size:16px;">■</span>&nbsp; Polígono analizado<br>
-            <span style="color:#ff4d4d; font-size:16px;">■</span>&nbsp; Hansen — pérdida forestal<br>
+            Hansen — pérdida por año:
+            <span style="color:#4575b4;">■</span><span style="color:#fee090;">■</span><span style="color:#d73027;">■</span><span style="color:#a50026;">■</span>
+            <span style="font-size:10px; color:#cfd8cf;">(antiguo→reciente)</span><br>
             <span style="color:#ff9933; font-size:16px;">■</span>&nbsp; GLAD — alertas<br>
             <span style="color:#cc66ff; font-size:16px;">■</span>&nbsp; JRC — deforestación<br>
             <span style="color:#ff6600; font-size:16px;">■</span>&nbsp; JRC — degradación<br>
