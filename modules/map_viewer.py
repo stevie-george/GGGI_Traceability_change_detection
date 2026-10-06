@@ -2,7 +2,16 @@ import folium
 import folium.plugins as plugins
 import json
 from shapely.geometry import mapping
-from modules.gee_analysis import LULC_PALETTE, LULC_CLASSES, HANSEN_YEAR
+from modules.gee_analysis import LULC_PALETTE, LULC_CLASSES, HANSEN_ASSET
+
+# Año de la versión de Hansen (máximo de la rampa por año). Se calcula local
+# desde HANSEN_ASSET para no depender de constantes nuevas de gee_analysis
+# durante recargas parciales de Streamlit.
+try:
+    HANSEN_YEAR = int(HANSEN_ASSET.split("global_forest_change_")[1].split("_")[0])
+except (IndexError, ValueError):
+    import datetime as _dt
+    HANSEN_YEAR = _dt.date.today().year
 
 # Rampa temporal para Hansen: años antiguos en frío (azul) → recientes en
 # cálido (rojo), para leer el "año de pérdida" de un vistazo.

@@ -9,11 +9,19 @@ from modules.gee_analysis import (initialize_gee, analyze_hansen, analyze_glad,
                                    analyze_jrc_deforestation,
                                    analyze_modis_burn, analyze_jrc_amazon,
                                    analyze_lulc,
-                                   get_polygon_area_ha, HANSEN_YEAR, JRC_TMF_YEAR)
+                                   get_polygon_area_ha, HANSEN_ASSET, JRC_TMF_YEAR)
 from modules.map_viewer import create_alert_map
 from modules.report_generator import generate_pdf, generate_excel
 
 CURRENT_YEAR = datetime.date.today().year
+
+# Año de la versión de Hansen, derivado del ID del asset (p. ej. ..._2025_v1_13
+# → 2025). Se calcula aquí (no se importa) para no depender de constantes nuevas
+# de gee_analysis durante recargas parciales de Streamlit.
+try:
+    HANSEN_YEAR = int(HANSEN_ASSET.split("global_forest_change_")[1].split("_")[0])
+except (IndexError, ValueError):
+    HANSEN_YEAR = CURRENT_YEAR
 
 st.set_page_config(page_title="Sistema de Consenso en Pérdida de Cobertura", page_icon="🌿", layout="wide")
 
