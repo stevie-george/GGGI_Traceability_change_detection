@@ -8,6 +8,7 @@ from modules.polygon_input import get_polygon_from_draw, get_polygon_from_file, 
 from modules.gee_analysis import (initialize_gee, analyze_hansen, analyze_glad,
                                    analyze_jrc_deforestation,
                                    analyze_modis_burn, analyze_jrc_amazon,
+                                   analyze_lulc,
                                    get_polygon_area_ha, HANSEN_ASSET, JRC_TMF_YEAR)
 from modules.map_viewer import create_alert_map
 from modules.report_generator import generate_pdf, generate_excel
@@ -49,6 +50,11 @@ with st.sidebar:
     use_jrc    = st.checkbox("JRC (deforestación + degradación)", value=True)
     use_modis  = st.checkbox("MODIS (área quemada)", value=True)
     use_amazon = st.checkbox("JRC Amazon (regrowth 2023)", value=False)
+
+    st.subheader("Clasificación propia")
+    use_lulc   = st.checkbox("COBIOCOM LULC — Jalisco 2025", value=True,
+                             help="Clasificación de uso/cobertura (incluye aguacate y agave). "
+                                  "Solo tiene datos dentro de Jalisco.")
 
     st.divider()
     gee_ok = initialize_gee()
@@ -127,6 +133,9 @@ with tab1:
             if use_amazon:
                 progress.progress(92, text="Consultando JRC Amazon...")
                 results["amazon"] = analyze_jrc_amazon(polygon)
+            if use_lulc:
+                progress.progress(96, text="Consultando clasificación COBIOCOM LULC...")
+                results["lulc"] = analyze_lulc(polygon)
 
             progress.progress(100, text="¡Análisis completado!")
             st.session_state["results"] = results
@@ -143,6 +152,7 @@ with tab2:
         jrc     = results.get("jrc", {})
         modis   = results.get("modis", {})
         amazon  = results.get("amazon", {})
+        lulc    = results.get("lulc", {})
 
         # Mapa grande con basemaps satelite
         m = create_alert_map(polygon, results)
@@ -183,6 +193,31 @@ with tab2:
             col_b.metric("Degradado",       f"{amazon.get('degraded_ha', 0):,.2f} ha",    delta_color="inverse")
             col_c.metric("Deforestado",     f"{amazon.get('deforested_ha', 0):,.2f} ha",  delta_color="inverse")
             col_d.metric("Regeneración",    f"{amazon.get('regrowth_ha', 0):,.2f} ha",    delta_color="normal")
+
+        # Fila 4 — Clasificación COBIOCOM LULC (aguacate / agave + por clase)
+        if lulc:
+            st.markdown("**🗺️ Clasificación COBIOCOM LULC (Jalisco 2025)**")
+            area_poly = results.get("area_ha", 0) or 0
+            agu = lulc.get("aguacate_ha", 0) or 0
+            agv = lulc.get("agave_ha", 0) or 0
+            col_l1, col_l2, col_l3 = st.columns(3)
+            col_l1.metric("🥑 Aguacate", f"{agu:,.2f} ha",
+                          delta=f"{round(agu / area_poly * 100, 1) if area_poly else 0}% del polígono")
+            col_l2.metric("🌵 Agave", f"{agv:,.2f} ha",
+                          delta=f"{round(agv / area_poly * 100, 1) if area_poly else 0}% del polígono")
+            col_l3.metric("Aguacate + Agave", f"{agu + agv:,.2f} ha")
+
+            by_class = [c for c in lulc.get("by_class", []) if c.get("area_ha", 0) > 0]
+            if by_class:
+                with st.expander("Ver desglose por clase"):
+                    st.dataframe(
+                        {"Clase":     [c["name"] for c in by_class],
+                         "Área (ha)": [round(c["area_ha"], 2) for c in by_class],
+                         "% polígono":[round(c["area_ha"] / area_poly * 100, 1) if area_poly else 0
+                                       for c in by_class]},
+                        use_container_width=True, hide_index=True)
+            if lulc.get("note"):
+                st.warning(f"⚠️ COBIOCOM LULC: {lulc['note']}")
 
         st.divider()
 
@@ -439,3 +474,17 @@ with tab6:
 
     st.button("📊 Calcular métricas", disabled=True)
     st.caption("⚠️ Funcionalidad en desarrollo — disponible en v2.0")
+
+# ══════════════════════════════════════════════════════════
+# DISCLAIMER GLOBAL (discreto, presente en todas las pestañas)
+# ══════════════════════════════════════════════════════════
+st.markdown(
+    "<div style='margin-top:1.5rem; padding-top:0.5rem;"
+    " border-top:1px solid rgba(128,128,128,0.25);"
+    " color:#8a8a8a; font-size:11px; line-height:1.5; text-align:center;'>"
+    "La información presentada en esta plataforma es resultado de métodos científicos"
+    " en desarrollo y su precisión puede variar. Debe interpretarse como apoyo a la"
+    " toma de decisiones, no como dato catastral o legal definitivo."
+    "</div>",
+    unsafe_allow_html=True,
+)

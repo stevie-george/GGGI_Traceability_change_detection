@@ -26,6 +26,30 @@ JRC_TMF_COLLECTION = f"projects/JRC/TMF/v1_{JRC_TMF_YEAR}/AnnualChanges"
 # Primer año con datos consistentes para las series casi-en-tiempo-real.
 NRT_START_YEAR = 2015
 
+# ── Capas LULC COBIOCOM (clasificación propia Jalisco 2025) ──────────────────
+# Asset de la clasificación (1 banda uint8 = class_id). Cambia este path si el
+# asset se sube con otro nombre/versión.
+LULC_ASSET = "projects/lulcc-traceability-mx40/assets/cobiocom/jalisco_lulc_2025_class"
+# (class_id, nombre) en el mismo orden que la paleta de colores.
+LULC_CLASSES = [
+    (1,  "Bosque templado"),
+    (2,  "Selva seca"),
+    (3,  "Matorral"),
+    (4,  "Pastizal"),
+    (5,  "Aguacate"),
+    (6,  "Agave"),
+    (8,  "Agricultura protegida"),
+    (10, "Urbano / Suelo"),
+    (12, "Agua"),
+    (13, "Agricultura (cultivos)"),
+]
+LULC_IDS = [cid for cid, _ in LULC_CLASSES]
+LULC_PALETTE = ["1b5e20", "7cb342", "c0ca33", "dce775", "004d40",
+                "8e24aa", "e0e0e0", "b71c1c", "1565c0", "ffd54f"]
+LULC_AGUACATE_ID = 5
+LULC_AGAVE_ID = 6
+LULC_SCALE = 10  # resolución nativa en metros
+
 def current_year():
     """Año actual, calculado en cada ejecución (no fijado a mano)."""
     return datetime.date.today().year
@@ -329,6 +353,40 @@ def analyze_modis_burn(polygon):
         return {"burn_area_ha": round(total, 4), "by_year": by_year, "burn_image": burn_img}
     except Exception as e:
         return {"burn_area_ha": 0, "by_year": [], "burn_image": None, "note": str(e)}
+
+
+def analyze_lulc(polygon):
+    """Clasificación LULC COBIOCOM: área por clase dentro del polígono (en una
+    sola consulta con reductor agrupado) + imágenes para el mapa: clasificación
+    completa, aguacate y agave por separado (sobreponibles)."""
+    ee_geom = polygon_to_ee(polygon)
+    try:
+        img = ee.Image(LULC_ASSET)
+        area_img = ee.Image.pixelArea().divide(10000)
+        # Área por clase en UNA sola llamada: suma del área agrupada por class_id.
+        grouped = area_img.addBands(img).reduceRegion(
+            reducer=ee.Reducer.sum().group(groupField=1, groupName="class"),
+            geometry=ee_geom, scale=LULC_SCALE, maxPixels=1e13, bestEffort=True
+        ).getInfo()
+        areas = {int(g["class"]): round(g["sum"], 4)
+                 for g in grouped.get("groups", [])}
+        by_class = [{"class_id": cid, "name": name, "area_ha": areas.get(cid, 0.0)}
+                    for cid, name in LULC_CLASSES]
+        # Imágenes para el mapa. La clasificación completa se remapea a 0..N-1
+        # para alinear con la paleta; aguacate/agave quedan como máscaras 1/0.
+        class_img = img.remap(LULC_IDS, list(range(len(LULC_IDS))))
+        return {
+            "aguacate_ha": areas.get(LULC_AGUACATE_ID, 0.0),
+            "agave_ha":    areas.get(LULC_AGAVE_ID, 0.0),
+            "by_class":    by_class,
+            "class_image":    class_img,
+            "aguacate_image": img.eq(LULC_AGUACATE_ID).selfMask(),
+            "agave_image":    img.eq(LULC_AGAVE_ID).selfMask(),
+        }
+    except Exception as e:
+        return {"aguacate_ha": 0, "agave_ha": 0, "by_class": [],
+                "class_image": None, "aguacate_image": None,
+                "agave_image": None, "note": str(e)}
 
 
 def get_tile_url(image, vis_params):

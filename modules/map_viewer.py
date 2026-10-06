@@ -2,6 +2,7 @@ import folium
 import folium.plugins as plugins
 import json
 from shapely.geometry import mapping
+from modules.gee_analysis import LULC_PALETTE, LULC_CLASSES
 
 LAYER_STYLES = {
     "hansen":     {"color": "#ff4d4d", "name": "Hansen — Pérdida forestal"},
@@ -9,6 +10,9 @@ LAYER_STYLES = {
     "jrc_defor":  {"color": "#cc66ff", "name": "JRC — Deforestación"},
     "jrc_degrad": {"color": "#ff6600", "name": "JRC — Degradación"},
     "modis":      {"color": "#ff3333", "name": "MODIS — Área quemada"},
+    "lulc":       {"color": "#8e24aa", "name": "COBIOCOM — Clasificación LULC"},
+    "aguacate":   {"color": "#004d40", "name": "COBIOCOM — Aguacate"},
+    "agave":      {"color": "#8e24aa", "name": "COBIOCOM — Agave"},
 }
 
 def add_tile_layer(m, tile_url, name, color):
@@ -74,6 +78,7 @@ def create_alert_map(polygon, results=None, center=None):
         glad   = results.get("glad", {})
         jrc    = results.get("jrc", {})
         modis  = results.get("modis", {})
+        lulc   = results.get("lulc", {})
 
         if hansen.get("loss_image"):
             tile_url = get_tile_url(hansen["loss_image"],
@@ -101,12 +106,36 @@ def create_alert_map(polygon, results=None, center=None):
                 {"min": 1, "max": 366, "palette": ["ffd700", "ff4500", "8b0000"]})
             add_tile_layer(m, tile_url, LAYER_STYLES["modis"]["name"], LAYER_STYLES["modis"]["color"])
 
-    # Leyenda
-    legend_html = """
+        # ── Capas COBIOCOM LULC (sobreponibles) ──────────────────────────
+        if lulc.get("class_image"):
+            tile_url = get_tile_url(lulc["class_image"],
+                {"min": 0, "max": len(LULC_PALETTE) - 1, "palette": LULC_PALETTE})
+            add_tile_layer(m, tile_url, LAYER_STYLES["lulc"]["name"], LAYER_STYLES["lulc"]["color"])
+
+        if lulc.get("aguacate_image"):
+            tile_url = get_tile_url(lulc["aguacate_image"],
+                {"min": 1, "max": 1, "palette": ["004d40"]})
+            add_tile_layer(m, tile_url, LAYER_STYLES["aguacate"]["name"], LAYER_STYLES["aguacate"]["color"])
+
+        if lulc.get("agave_image"):
+            tile_url = get_tile_url(lulc["agave_image"],
+                {"min": 1, "max": 1, "palette": ["8e24aa"]})
+            add_tile_layer(m, tile_url, LAYER_STYLES["agave"]["name"], LAYER_STYLES["agave"]["color"])
+
+    # Leyenda — clases LULC generadas desde la leyenda real (aguacate/agave en negrita)
+    lulc_rows = ""
+    for (cid, name), color in zip(LULC_CLASSES, LULC_PALETTE):
+        strong = cid in (5, 6)  # aguacate / agave
+        label = f"<b>{name}</b>" if strong else name
+        lulc_rows += (f'<span style="color:#{color}; font-size:16px;">■</span>'
+                      f'&nbsp; {label}<br>')
+
+    legend_html = f"""
     <div style="position: fixed; bottom: 30px; left: 30px; z-index: 1000;
          background: rgba(15,15,15,0.88); padding: 14px 18px; border-radius: 10px;
-         border: 1px solid rgba(255,255,255,0.15); font-size: 13px; line-height: 2;
-         font-family: Arial, sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">
+         border: 1px solid rgba(255,255,255,0.15); font-size: 13px; line-height: 1.9;
+         font-family: Arial, sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+         max-height: 70vh; overflow-y: auto;">
         <div style="color:#fff; font-weight:bold; font-size:14px;
                     margin-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.2);
                     padding-bottom:4px;">🗺️ Leyenda</div>
@@ -118,6 +147,10 @@ def create_alert_map(polygon, results=None, center=None):
             <span style="color:#ff6600; font-size:16px;">■</span>&nbsp; JRC — degradación<br>
             <span style="color:#ff3333; font-size:16px;">■</span>&nbsp; MODIS — área quemada<br>
         </div>
+        <div style="color:#fff; font-weight:bold; font-size:12px; margin-top:8px;
+                    border-top:1px solid rgba(255,255,255,0.2); padding-top:4px;">
+            Clasificación LULC (Jalisco 2025)</div>
+        <div style="color:#fff;">{lulc_rows}</div>
     </div>
     """
     m.get_root().html.add_child(folium.Element(legend_html))
