@@ -29,7 +29,7 @@ NRT_START_YEAR = 2015
 # ── Capas LULC COBIOCOM (clasificación propia Jalisco 2025) ──────────────────
 # Asset de la clasificación (1 banda uint8 = class_id). Cambia este path si el
 # asset se sube con otro nombre/versión.
-LULC_ASSET = "projects/lulcc-traceability-mx40/assets/cobiocom/jalisco_lulc_2025_class"
+LULC_ASSET = "projects/lulcc-traceability-mx40/assets/cobiocom/jalisco/jalisco_lulc_2025_class"
 # (class_id, nombre) en el mismo orden que la paleta de colores.
 LULC_CLASSES = [
     (1,  "Bosque templado"),
