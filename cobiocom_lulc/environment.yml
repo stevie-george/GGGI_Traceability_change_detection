@@ -1,0 +1,65 @@
+# =============================================================================
+# COBIOCOM land-cover pipeline — conda environment (start from scratch)
+# -----------------------------------------------------------------------------
+# On a brand-new machine:
+#
+#   1. Install Miniconda (lightweight) or Anaconda:
+#        https://www.anaconda.com/download/success
+#      Windows: run the 64-bit installer, then use the "Anaconda Prompt"
+#      (or PowerShell after running `conda init`).
+#
+#   2. Set STRICT channel priority (IMPORTANT on Windows: a "flexible" solve mixes
+#      GDAL build variants and breaks rasterio with "DLL load failed importing _warp"):
+#        conda config --set channel_priority strict
+#
+#   3. Create and activate the environment (run from THIS folder):
+#        cd path\to\deforestation_alert\cobiocom_lulc
+#        conda env create -f environment.yml
+#        conda activate cobiocom
+#
+#   4. Verify it worked:
+#        python -c "import geopandas, rioxarray, odc.stac, pystac_client, planetary_computer, lightgbm; print('env OK')"
+#
+# The GDAL-backed libraries (rasterio, rioxarray, odc-stac) install cleanly from
+# conda-forge but are painful via pip on Windows — always use this file, not pip.
+# To freeze exact versions later:  conda env export > environment.lock.yml
+# =============================================================================
+name: cobiocom
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+
+  # --- geospatial IO / STAC (stream Sentinel-2, read/write COGs, vectors) ---
+  - geopandas>=1.0
+  - pyogrio
+  - shapely>=2.0
+  - rasterio>=1.3
+  - rioxarray
+  - gdal
+  - odc-stac
+  - pystac-client
+  - planetary-computer
+  - stackstac
+
+  # --- arrays / parallel compute ---
+  - xarray>=2024.1
+  - dask
+  - numpy
+  - pandas
+  - scipy
+
+  # --- sampling: extract raster values under the label polygons ---
+  - rasterstats
+  - geocube
+
+  # --- classifier ---
+  - scikit-learn
+  - lightgbm
+
+  # --- labelling / inspection / notebooks ---
+  - jupyterlab
+  - leafmap
+  - localtileserver
+  - matplotlib
+  - tqdm

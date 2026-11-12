@@ -29,3 +29,19 @@ cobiocom_lulc/validation/*.gpkg
 # Paquetes a consultores (bundles + zips, grandes)
 cobiocom_labeling_*/
 cobiocom_labeling_*.zip
+
+# ---- Salidas por versión/estado-año + COGs de plataforma (regenerables, pesados) ----
+# maps/ y out/ ya están arriba; esto cubre las variantes por versión y por estado
+cobiocom_lulc/maps_*/
+cobiocom_lulc/out_*/
+cobiocom_lulc/plataforma/
+cobiocom_lulc/upload/
+# Entregables / binarios pesados (renders, presentaciones, zips, gpkg sueltos)
+cobiocom_lulc/*.png
+cobiocom_lulc/*.pptx
+cobiocom_lulc/*.zip
+cobiocom_lulc/*.gpkg
+# el set de etiquetas de referencia SI se versiona (comentario en su propia linea)
+!cobiocom_lulc/labels_merged.gpkg
+# Scripts scratch / diagnosticos de una sola vez (prefijo _)
+cobiocom_lulc/_*

@@ -24,13 +24,26 @@ OUT = HERE / "labels_merged.gpkg"
 # (src_file = consultor, batch, ruta). src_file NO lleva el batch para que el filtro
 # de Rodrigo en train.py excluya sus dos entregas a la vez.
 SOURCES = [
-    ("tona",    1, GEO / "Muestras/Entrenamiento/Tona_31_08_26/labels_1.gpkg"),
-    ("tona",    2, GEO / "Muestras/Entrenamiento/Tona_23_09_2026/levels_2.gpkg"),
+    # OJO: las carpetas de Tona fueron renombradas Tona_* -> Photointerpretation_*
+    ("tona",    1, GEO / "Muestras/Entrenamiento/Photointerpretation_31_08_26/labels_1.gpkg"),
+    ("tona",    2, GEO / "Muestras/Entrenamiento/Photointerpretation_23_09_2026/levels_2.gpkg"),
+    ("tona",    3, GEO / "Muestras/Entrenamiento/Photointerpretation_05_10_2026/Labels_C3.gpkg"),
+    ("tona",    4, GEO / "Muestras/Entrenamiento/Photointerpretation_29_10_2026/Labels_C4.gpkg"),  # incremento clases difíciles (matorral/pastizal/agric)
     ("mau",     1, GEO / "Muestras/Entrenamiento/Mau_05_09_2026/labels_mau.gpkg"),
     ("mau",     2, GEO / "Muestras/Entrenamiento/Mau_14_09_2026/labels_mau_b2.gpkg"),
+    ("mau",     3, GEO / "Muestras/Entrenamiento/Mau_05_10_2026/labels_mau_b3.gpkg"),
     ("rodrigo", 1, GEO / "Muestras/Entrenamiento/Rodrigo_06_09_2026/labels_Rodrigo.gpkg"),
-    ("rodrigo", 2, GEO / "Muestras/Entrenamiento/Rodrigo_20_09_2026/Labels_RMRR.gpkg"),
+    ("rodrigo", 3, GEO / "Muestras/Entrenamiento/Rodrigo_11_10_2026/Labels-RMRR.gpkg"),  # b3 YA incluye b2
+    ("semadet",  1, HERE / "semadet_matorral.gpkg"),   # matorral xerófilo limpio (25 polys, class_id=3)
+    ("semadet",  2, HERE / "semadet_avocado.gpkg"),     # aguacate SEMADET + 2025 (5587 polys, class_id=5)
+    ("semadet2", 1, HERE / "semadet_verif_2025.gpkg"),  # batch VERIFICADO 2025 (2535 polys, clases 1,2,3,4,6,9; aguacate omitido=duplicado)
+    ("frontera", 1, HERE / "frontera_agricola.gpkg"),   # agricultura Frontera Agrícola (sin aguacate/agave)
 ]
+# Matorral de consultor: los batches TEMPRANOS (1-3) eran pastizal-like (verde ~0.68, NDMI>0, ~1190m)
+# -> se EXCLUYEN; el matorral lo aportaba SEMADET. Pero el batch 4 de Tona (29-10) ya es matorral
+# xerófilo real (verde ~0.47, NDMI<0, ~1950m, coincide con SEMADET) -> se INCLUYE. Regla: batch>=4.
+CONSULTORES = ("tona", "mau", "rodrigo")
+MATORRAL_MIN_BATCH = 4   # desde este batch el matorral de consultor se considera confiable
 RENAME = {"interprete": "interpreter", "date_label": "date_labeled"}
 KEEP = ["class_id", "class_name", "set", "source", "confidence",
         "interpreter", "date_labeled", "notes"]
@@ -50,6 +63,15 @@ for who, batch, f in SOURCES:
     g = gpd.read_file(f, layer=lyr).to_crs(OUT_CRS).rename(columns=RENAME)
     g["class_id"] = pd.to_numeric(g["class_id"], errors="coerce")
     n_bad = int(g["class_id"].isna().sum())
+    if who in CONSULTORES and batch < MATORRAL_MIN_BATCH:
+        n3 = int((g["class_id"] == 3).sum())
+        if n3:
+            g = g[g["class_id"] != 3]
+            print(f"    ({who} b{batch}: {n3} matorral de consultor excluido -> previo pastizal-like; lo aporta SEMADET + batch>={MATORRAL_MIN_BATCH})")
+    elif who in CONSULTORES:
+        n3 = int((g["class_id"] == 3).sum())
+        if n3:
+            print(f"    ({who} b{batch}: {n3} matorral de consultor INCLUIDO -> xerófilo verificado (batch>={MATORRAL_MIN_BATCH}))")
     g["class_name"] = g["class_id"].map(lambda i: id2name.get(int(i)) if pd.notna(i) else None)
     if "interpreter" not in g.columns:
         g["interpreter"] = who

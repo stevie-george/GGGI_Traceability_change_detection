@@ -48,7 +48,7 @@ def main():
     lab = lab[lab["tile_id"].notna()].reset_index(drop=True)
     print(f"polígonos a muestrear: {len(lab)} en {lab['tile_id'].nunique()} tiles")
 
-    names, frames, n_missing, n_empty = None, [], 0, 0
+    frames, n_missing, n_empty = [], 0, 0
     for tid, g in lab.groupby("tile_id"):
         fpath = OUT / tid / f"{tid}_features.tif"
         if not fpath.exists():
@@ -57,8 +57,8 @@ def main():
         dpath = OUT / tid / f"{tid}_dem.tif"
         with rasterio.open(fpath) as src, \
                 (rasterio.open(dpath) if dpath.exists() else nullcontext()) as dsrc:
-            if names is None:
-                names = (band_names(tid) or [f"b{i+1}" for i in range(src.count)]) + DEM_BANDS
+            # nombres POR TILE (los tiles tienen 34 o 47 bandas; pd.concat alinea por nombre)
+            tnames = (band_names(tid) or [f"b{i+1}" for i in range(src.count)]) + DEM_BANDS
             for _, row in g.iterrows():
                 geom = row.geometry
                 win = from_bounds(*geom.bounds, transform=src.transform).round_offsets().round_lengths()
@@ -76,14 +76,19 @@ def main():
                 if args.max_per_poly and len(yy) > args.max_per_poly:
                     sel = np.random.default_rng(0).choice(len(yy), args.max_per_poly, replace=False)
                     yy, xx = yy[sel], xx[sel]
-                df = pd.DataFrame(arr[:, yy, xx].T, columns=names)
+                df = pd.DataFrame(arr[:, yy, xx].T, columns=tnames)
                 df["class_id"] = int(row["class_id"])
                 df["class_name"] = row["class_name"]
                 df["src_file"] = row["src_file"]
                 df["tile_id"] = tid
                 frames.append(df)
 
-    tab = pd.concat(frames, ignore_index=True).dropna(subset=names).reset_index(drop=True)
+    tab = pd.concat(frames, ignore_index=True)       # alinea por nombre (NaN en bandas que un tile no tiene)
+    # quita solo píxeles nodata (NaN en el verdor base); conserva tiles de 2 estaciones
+    core = [c for c in ("green_NDVI", "dry_NDVI") if c in tab.columns]
+    if core:
+        tab = tab.dropna(subset=core)
+    tab = tab.reset_index(drop=True)
     tab["is_avocado"] = tab["class_name"].str.contains("vocado", case=False, na=False).astype(int)
 
     try:

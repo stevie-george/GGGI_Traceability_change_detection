@@ -1,0 +1,19 @@
+# Generated, large, or secret-bearing — keep out of git
+# (los comentarios van en su propia línea: un # en línea con el patrón NO es comentario
+#  en gitignore y rompe el patrón)
+
+# Sentinel-2 composite & render COGs (large, regenerable)
+out/
+# QGIS project embeds the Planet API key in basemap URLs — do NOT commit
+*.qgz
+__pycache__/
+*.pyc
+
+# Fase 2 (CNN) — datos y pesos, viven en disco, regenerables
+# parches de entrenamiento (npz)
+cnn_patches/
+# mapas refinados por el CNN
+maps_cnn/
+# pesos del CNN (cnn_model.pt)
+*.pt
+*.npz

@@ -122,6 +122,10 @@ def main():
     ap.add_argument("--force", action="store_true",
                     help="sobrescribir un paquete existente con el mismo --name (por defecto NO "
                          "sobrescribe: cada paquete se guarda por separado)")
+    ap.add_argument("--out", default="out", help="carpeta de tiles (default out/; usa out_michoacan)")
+    ap.add_argument("--no-project", action="store_true",
+                    help="NO incluir el .qgz de Jalisco (p. ej. para Michoacán): envía renders + "
+                         "etiquetas vacías + docs + add_tiles.py (el consultor carga los renders)")
     args = ap.parse_args()
 
     bundle = HERE.parent / f"cobiocom_labeling_{args.name}"
@@ -146,7 +150,7 @@ def main():
             print("[warn] missing (build the project / assets first):", ", ".join(missing))
         fresh_labels(bundle / "labels.gpkg")
 
-    out_src = HERE / "out"
+    out_src = HERE / args.out
     # full = every tile this consultant should END UP with -> drives the .qgz + default renders
     if args.consultant is not None:
         from s2_export import tiles_for_consultant
@@ -195,6 +199,23 @@ def main():
             encoding="utf-8")
         print(f"tiles-only update: {len(render_tiles)} tile(s) + add_tiles.py "
               f"(their project + labels untouched)")
+    elif args.no_project:
+        if (HERE / "add_tiles.py").exists():
+            shutil.copy2(HERE / "add_tiles.py", bundle / "add_tiles.py")
+        (bundle / "LEEME_michoacan.txt").write_text(
+            "Batch de muestreo — Michoacan (cinturon aguacatero)\n"
+            "===================================================\n\n"
+            "1. Descomprime este ZIP donde quieras.\n"
+            "2. Abre QGIS (proyecto nuevo) y carga los renders de referencia:\n"
+            "   a) Consola de Python (Complementos -> Consola de Python), pega y Enter:\n"
+            "        exec(open(r'add_tiles.py').read())\n"
+            "      (usa la ruta COMPLETA a add_tiles.py). Carga los tiles agrupados y con estilo.\n"
+            "   b) O arrastra los .tif de out\\<tile>\\ al mapa (p. ej. *_dry_SWIR.tif, *_green_*.tif).\n"
+            "3. Carga labels.gpkg (capa 'labels', vacia) y dibuja los poligonos ahi.\n"
+            "   Usa legend.csv para los class_id y SAMPLING_PROTOCOL.md para el criterio.\n"
+            "4. Enfocate en AGUACATE y las clases del protocolo. Guarda (Ctrl+S).\n",
+            encoding="utf-8")
+        print(f"paquete Michoacan (sin .qgz): {len(render_tiles)} tiles + renders + labels.gpkg vacio + docs")
     else:
         src_qgz = HERE / "cobiocom_labeling.qgz"
         if src_qgz.exists():

@@ -38,11 +38,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("# 🌿 Sistema de Consenso en Pérdida de Cobertura")
-st.caption("Consenso multi-fuente de pérdida de cobertura forestal — cultivos de aguacate y agave tequilana en México")
+st.caption("Consenso multi-fuente de pérdida de cobertura forestal — cultivos de aguacate y agave en México")
 
 with st.sidebar:
     st.header("⚙️ Configuración")
-    cultivo    = st.selectbox("Cultivo", ["Aguacate", "Agave tequilana", "Otro"])
+    cultivo    = st.selectbox("Cultivo", ["Aguacate", "Agave ", "Otro"])
     start_year = st.slider("Año inicio", 2001, CURRENT_YEAR, 2015)
     end_year   = st.slider("Año fin",    2001, CURRENT_YEAR, CURRENT_YEAR)
 
@@ -479,7 +479,7 @@ with tab6:
     st.caption("⚠️ Funcionalidad en desarrollo — disponible en v2.0")
 
 # ══════════════════════════════════════════════════════════
-# DISCLAIMER GLOBAL (discreto, presente en todas las pestañas)
+# DISCLAIMER GLOBAL 
 # ══════════════════════════════════════════════════════════
 st.markdown(
     "<div style='margin-top:1.5rem; padding-top:0.5rem;"

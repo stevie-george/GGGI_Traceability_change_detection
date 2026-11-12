@@ -55,16 +55,19 @@ def main():
     ap.add_argument("--tiles", nargs="*", default=None)
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--force", action="store_true", help="rehacer aunque ya exista _dem.tif")
+    ap.add_argument("--out", default="out", help="carpeta de tiles (default out/; usa out_<estado> por estado)")
     args = ap.parse_args()
-    tiles = args.tiles or sorted(d.name for d in OUT.glob("r*c*") if d.is_dir())
+    out_dir = Path(args.out) if Path(args.out).is_absolute() else HERE / args.out
+    tiles = args.tiles or sorted(d.name for d in out_dir.iterdir()        # cualquier prefijo (r… o 16_r…)
+                                 if d.is_dir() and (d / f"{d.name}_features.tif").exists())
     if args.limit:
         tiles = tiles[:args.limit]
 
     catalog = pystac_client.Client.open(CATALOG, modifier=pc.sign_inplace)
     n_ok = n_skip = n_miss = 0
     for i, tid in enumerate(tiles, 1):
-        feat = OUT / tid / f"{tid}_features.tif"
-        dpath = OUT / tid / f"{tid}_dem.tif"
+        feat = out_dir / tid / f"{tid}_features.tif"
+        dpath = out_dir / tid / f"{tid}_dem.tif"
         if not feat.exists():
             n_miss += 1; continue
         if dpath.exists() and not args.force:
@@ -98,7 +101,7 @@ def main():
               f"pend máx {np.nanmax(slope):.0f}°)")
 
     print(f"\nDEM: {n_ok} nuevos | {n_skip} ya existían | {n_miss} sin features/DEM  "
-          f"-> out/<tile>/<tile>_dem.tif")
+          f"-> {out_dir.name}/<tile>/<tile>_dem.tif")
 
 
 if __name__ == "__main__":

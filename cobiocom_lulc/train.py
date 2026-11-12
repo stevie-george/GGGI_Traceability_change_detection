@@ -59,16 +59,47 @@ def main():
                     help="incluir a Rodrigo PERO quitando estas clases suyas (p. ej. 5 7 = "
                          "aguacate y otro-perenne, sus clases poco confiables)")
     ap.add_argument("--cap", type=int, default=40000, help="máx. píxeles por clase (0 = sin tope)")
+    ap.add_argument("--drop-source", nargs="*", default=None,
+                    help="excluye estas fuentes por src_file, p.ej. 'inegi_svii' (prueba la "
+                         "hipótesis de que los negativos automáticos meten ruido)")
+    ap.add_argument("--features-like", default=None,
+                    help="usa el MISMO conjunto de predictores que este modelo .pkl (p.ej. el 04 "
+                         "de 36 bandas) para que infiera en tiles de 2 y 4 estaciones")
+    ap.add_argument("--drop-class", nargs="*", type=int, default=None,
+                    help="excluye estas clases (class_id FINO) del entrenamiento, p.ej. 3 = matorral "
+                         "(hasta reconciliar su definición)")
     ap.add_argument("--trees", type=int, default=300)
     ap.add_argument("--groups", default=None,
                     help="CSV class_id->group_id,group_name: entrena con legenda AGRUPADA")
     ap.add_argument("--version", default=None,
                     help="guarda modelo+reporte+tablas en entrenamientos/<version>/")
+    ap.add_argument("--table", default="training_table.parquet",
+                    help="tabla parquet de entrenamiento (default). Usa 'samples.parquet' para "
+                         "SOLO muestras manuales (sin INEGI).")
     args = ap.parse_args()
 
-    df = pd.read_parquet(TABLE)
+    df = pd.read_parquet(HERE / args.table)
+    print(f"tabla: {args.table} ({len(df):,} filas)")
     feats = [c for c in df.columns if c not in META]
+    if args.features_like:
+        ref = joblib.load(args.features_like)["features"]
+        feats = [f for f in ref if f in df.columns]
+        missing = [f for f in ref if f not in df.columns]
+        print(f"--features-like: {len(feats)} predictores del modelo de referencia"
+              + (f" | FALTAN en la tabla: {missing}" if missing else ""))
     df = df.dropna(subset=feats).reset_index(drop=True)
+
+    if args.drop_source:
+        before = len(df)
+        df = df[~df["src_file"].isin(args.drop_source)].reset_index(drop=True)
+        print(f"--drop-source {args.drop_source}: {before - len(df):,} px excluidos "
+              f"({len(df):,} restantes)")
+
+    if args.drop_class:
+        before = len(df)
+        df = df[~df["class_id"].isin(args.drop_class)].reset_index(drop=True)
+        print(f"--drop-class {args.drop_class} (class_id fino): {before - len(df):,} px excluidos "
+              f"({len(df):,} restantes)")
 
     rod = df[df["src_file"] == "rodrigo"]
     if args.with_rodrigo:

@@ -76,13 +76,27 @@ TILE_TIMEOUT = 1800     # per-tile watchdog (s): con 4 temporadas + lectura seri
 #                         costero puede tardar ~15-20 min; damos margen antes de matarlo.
 #                         running at 15 min is hung on a dead socket -> kill + retry it.
 
-# Seasons for the 2025-2026 cycle — EDIT to your target mapping year.
-SEASONS = {
-    "wet":     ("2025-06-01", "2025-08-31"),   # green-up / monzón temprano
-    "green":   ("2025-09-01", "2025-11-30"),   # post-monsoon peak greenness
-    "cooldry": ("2025-12-01", "2026-02-28"),   # seca fría / senescencia temprana
-    "dry":     ("2026-03-01", "2026-05-31"),   # dry-season senescence trough
-}
+def seasons_for_year(y, wide=False):
+    """Temporadas para el AÑO de mapeo Y: green Sep-Nov Y, dry Mar-May Y+1.
+    wide=True ensancha green (Ago-Dic) y dry (Feb-Jun) para años pobres en escenas
+    — p.ej. 2016, cuando solo existía Sentinel-2A (revisita de 10 días)."""
+    if wide:
+        return {
+            "wet":     (f"{y}-06-01", f"{y}-08-31"),
+            "green":   (f"{y}-08-01", f"{y}-12-31"),      # ancha: Ago-Dic
+            "cooldry": (f"{y}-12-01", f"{y+1}-02-28"),
+            "dry":     (f"{y+1}-02-01", f"{y+1}-06-15"),  # ancha: Feb-Jun
+        }
+    return {
+        "wet":     (f"{y}-06-01", f"{y}-08-31"),   # green-up / monzón temprano
+        "green":   (f"{y}-09-01", f"{y}-11-30"),   # post-monsoon peak greenness
+        "cooldry": (f"{y}-12-01", f"{y+1}-02-28"),  # seca fría / senescencia temprana
+        "dry":     (f"{y+1}-03-01", f"{y+1}-05-31"),  # dry-season senescence trough
+    }
+
+
+# Ciclo por defecto 2025-2026 (usar --year Y para otro año de mapeo).
+SEASONS = seasons_for_year(2025)
 RENDER_SEASONS = ("green", "dry")   # renders para consultores solo en estas (no inflar storage)
 
 OPTICAL = ["B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"]
@@ -173,9 +187,10 @@ def _has_crs(item):
 
 
 def _drop_ungeoreferenced(items):
-    """Drop scenes whose COGs have no CRS. Baja concurrencia (4): muchas aperturas
-    simultáneas por red congelan ciertas escenas costeras (desde caché local da igual)."""
-    with ThreadPoolExecutor(max_workers=4) as ex:
+    """Drop scenes whose COGs have no CRS. Secuencial (READ_WORKERS): abrir B04 de varias
+    escenas T13Q en paralelo las congela — el mismo motivo por el que las lecturas son
+    secuenciales (desde caché local da igual)."""
+    with ThreadPoolExecutor(max_workers=READ_WORKERS) as ex:
         keep = list(ex.map(_has_crs, items))
     good = [it for it, ok in zip(items, keep) if ok]
     if len(good) < len(items):
@@ -373,7 +388,7 @@ def _process_one(tid, cell, out):
     return status
 
 
-def _run_tile_watchdog(tid, out, states):
+def _run_tile_watchdog(tid, out, states, year=None, wide=False, seasons=None):
     """Run one tile in a subprocess under a hard timeout. A hung network read can't be
     killed from inside the process (it's stuck in GDAL/threads), but killing the whole
     subprocess frees the stalled socket -- so one dead connection can never freeze the
@@ -383,6 +398,12 @@ def _run_tile_watchdog(tid, out, states):
     cmd = [sys.executable, str(Path(__file__).resolve()), "--worker-tile", tid, "--out", out]
     if states:
         cmd += ["--states", *[str(s) for s in states]]
+    if year:
+        cmd += ["--year", str(year)]       # propagar el año de mapeo al worker
+    if wide:
+        cmd += ["--wide-green"]
+    if seasons:
+        cmd += ["--seasons", *seasons]
     for attempt in (1, 2):
         try:
             r = subprocess.run(cmd, timeout=TILE_TIMEOUT)     # run() kills the child on timeout
@@ -407,7 +428,27 @@ def main():
     ap.add_argument("--worker-tile", default=None,
                     help="internal: build exactly this one tile in-process then exit "
                          "(the orchestrator spawns one per tile under a timeout)")
+    ap.add_argument("--year", type=int, default=None,
+                    help="año de mapeo: green Sep-Nov Y, dry Mar-May Y+1 (default: 2025-26). "
+                         "Usa --out out_<año> para no pisar 2025.")
+    ap.add_argument("--wide-green", action="store_true",
+                    help="ensancha green (Ago-Dic) y dry (Feb-Jun) para años pobres en escenas, "
+                         "p.ej. 2016 (solo Sentinel-2A)")
+    ap.add_argument("--seasons", nargs="*", default=None,
+                    help="construye SOLO estas temporadas, p.ej. 'green dry'. El modelo de 36 bandas "
+                         "solo usa green+dry -> menos escenas, menos tiempo (evita stalls en T13Q).")
     args = ap.parse_args()
+
+    global SEASONS
+    if args.year:
+        SEASONS = seasons_for_year(args.year, args.wide_green)
+    if args.seasons:
+        SEASONS = {k: v for k, v in SEASONS.items() if k in args.seasons}
+        if not {"green", "dry"} <= set(SEASONS):
+            sys.exit("--seasons debe incluir green y dry (el clasificador los necesita para dNDVI/dNDMI)")
+    if args.year or args.seasons:
+        print(f"[año {args.year or 2025}{' WIDE' if args.wide_green else ''}] temporadas: "
+              + " | ".join(f"{k} {v[0]}..{v[1]}" for k, v in SEASONS.items()), flush=True)
 
     aoi = read_aoi(args.states)
     prefix = state_prefix(args.states)
@@ -433,7 +474,7 @@ def main():
         tiles = tiles[:args.limit]
     print(f"{len(tiles)} tiles -> {args.out}")
     for i, (tid, _cell) in enumerate(tiles, 1):
-        status = _run_tile_watchdog(tid, args.out, args.states)
+        status = _run_tile_watchdog(tid, args.out, args.states, args.year, args.wide_green, args.seasons)
         print(f"[{i}/{len(tiles)}] {tid}: {status}", flush=True)
 
 

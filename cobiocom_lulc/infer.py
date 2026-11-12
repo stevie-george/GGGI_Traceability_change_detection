@@ -9,10 +9,12 @@ Por cada tile escribe en maps/:
 Y un mosaico:
     maps/class_mosaic.vrt   maps/confidence_mosaic.vrt
 
-    run_producer.bat infer.py                 # los 54 tiles etiquetados
+    run_producer.bat infer.py                 # los tiles etiquetados -> maps/
     run_producer.bat infer.py --tiles r001c015 r002c005
+    run_producer.bat infer.py --version manual_sin_inegi --all   # -> maps_manual_sin_inegi/
     run_producer.bat infer.py --limit 3       # prueba
 
+Versionado: --version NAME escribe en maps_<NAME>/ (no pisa inferencias previas).
 Requiere rf_model.pkl (train.py) + SSD (features.tif).
 """
 import argparse
@@ -22,6 +24,7 @@ from pathlib import Path
 import numpy as np
 import geopandas as gpd
 import rasterio
+from rasterio.warp import reproject, Resampling
 import joblib
 
 HERE = Path(__file__).resolve().parent
@@ -38,6 +41,8 @@ with open(HERE / "legend.csv", encoding="utf-8") as f:
     for r in csv.DictReader(f):
         h = r["color_hex"].lstrip("#")
         CMAP[int(r["class_id"])] = (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), 255)
+# clase AGRUPADA 13 (Agricultura) no está en legend.csv -> color de cultivo anual (sin esto sale negra)
+CMAP.setdefault(13, CMAP.get(9, (255, 213, 79, 255)))
 
 
 def band_names(tile):
@@ -52,29 +57,41 @@ def main():
     ap.add_argument("--skip-existing", action="store_true",
                     help="reanudar: omitir tiles cuyo mapa ya está en maps/ (tras una interrupción)")
     ap.add_argument("--limit", type=int, default=None)
+    ap.add_argument("--version", default=None,
+                    help="escribe en maps_<version>/ en vez de maps/ (no pisa inferencias previas)")
+    ap.add_argument("--in-dir", default=None,
+                    help="carpeta de tiles de entrada (default: out/). P.ej. out_2016 para el mapa 2016; "
+                         "el DEM (estático) se reutiliza de out/ si no está en esta carpeta")
     args = ap.parse_args()
 
+    global OUT
+    if args.in_dir:
+        OUT = Path(args.in_dir)
+        print(f"[entrada: {OUT}]  (DEM se reutiliza de {HERE / 'out'} si falta aquí)")
+    maps_dir = HERE / (f"maps_{args.version}" if args.version else "maps")
     bundle = joblib.load(HERE / "rf_model.pkl")
     rf, feats, classes = bundle["model"], bundle["features"], np.array(bundle["labels"])
     rf_classes = np.array(rf.classes_)
     rf.n_jobs = PRED_JOBS      # el modelo se entrenó con n_jobs=-1; al inferir lo acotamos por RAM
 
     if args.all:
-        tiles = sorted(d.name for d in OUT.glob("r*c*") if d.is_dir())
+        tiles = sorted(d.name for d in OUT.iterdir()                      # cualquier prefijo (r… o 16_r…)
+                       if d.is_dir() and (d / f"{d.name}_features.tif").exists())
     elif args.tiles:
         tiles = list(args.tiles)
     else:
         tiles = sorted(gpd.read_file(LABELS, layer="labels")["tile_id"].dropna().unique())
     if args.limit:
         tiles = tiles[:args.limit]
-    MAPS.mkdir(exist_ok=True)
-    print(f"infiriendo {len(tiles)} tiles | {len(feats)} predictores | modelo {len(rf_classes)} clases")
+    maps_dir.mkdir(exist_ok=True)
+    print(f"infiriendo {len(tiles)} tiles -> {maps_dir.name}/ | {len(feats)} predictores | "
+          f"modelo {len(rf_classes)} clases")
 
     prof_base = {"driver": "GTiff", "count": 1, "dtype": "uint8", "nodata": 0,
                  "compress": "ZSTD", "tiled": True, "blockxsize": 512, "blockysize": 512}
     done, locked = 0, []
     for i, tid in enumerate(tiles, 1):
-        if args.skip_existing and (MAPS / f"{tid}_class.tif").exists() and (MAPS / f"{tid}_confidence.tif").exists():
+        if args.skip_existing and (maps_dir / f"{tid}_class.tif").exists() and (maps_dir / f"{tid}_confidence.tif").exists():
             print(f"  [{i}/{len(tiles)}] {tid}: ya existe, reanudo (omito)"); continue
         feat = OUT / tid / f"{tid}_features.tif"
         if not feat.exists():
@@ -85,11 +102,22 @@ def main():
             H, W = src.height, src.width
             prof = {**prof_base, "height": H, "width": W, "crs": src.crs, "transform": src.transform}
         dpath = OUT / tid / f"{tid}_dem.tif"
+        if not dpath.exists():
+            dpath = HERE / "out" / tid / f"{tid}_dem.tif"    # DEM estático: reutiliza el de 2025
+        dem = np.full((len(DEM_BANDS), H, W), np.nan, "float32")
         if dpath.exists():
             with rasterio.open(dpath) as dsrc:
-                arr = np.concatenate([arr, dsrc.read().astype("float32")], axis=0)
-        else:
-            arr = np.concatenate([arr, np.full((len(DEM_BANDS), H, W), np.nan, "float32")], axis=0)
+                if (dsrc.height, dsrc.width) == (H, W) and dsrc.transform == prof["transform"]:
+                    dem = dsrc.read().astype("float32")        # mismo grid: lectura directa
+                else:                                           # mismo CRS (6372), grid distinto -> resamplear
+                    reproject(dsrc.read().astype("float32"), dem,
+                              src_transform=dsrc.transform, src_crs=dsrc.crs,
+                              dst_transform=prof["transform"], dst_crs=prof["crs"],
+                              resampling=Resampling.bilinear,
+                              src_nodata=dsrc.nodata, dst_nodata=np.nan)
+                    print(f"  [{i}/{len(tiles)}] {tid}: DEM resampleado al grid del features "
+                          f"({dsrc.height}x{dsrc.width} -> {H}x{W})", flush=True)
+        arr = np.concatenate([arr, dem], axis=0)
         arr = arr[[names.index(fn) for fn in feats]]         # solo/orden las bandas del modelo
 
         flat = arr.reshape(len(feats), -1).T
@@ -104,7 +132,7 @@ def main():
             conf[b] = np.clip(p.max(1) * 100, 0, 100).astype("uint8")
             del p
 
-        cpath, qpath = MAPS / f"{tid}_class.tif", MAPS / f"{tid}_confidence.tif"
+        cpath, qpath = maps_dir / f"{tid}_class.tif", maps_dir / f"{tid}_confidence.tif"
         try:
             with rasterio.open(cpath, "w", **prof) as dst:
                 dst.write(cls.reshape(H, W), 1)
@@ -124,20 +152,21 @@ def main():
     try:
         from osgeo import gdal
         for kind in ("class", "confidence"):
-            fs = sorted(str(p) for p in MAPS.glob(f"*_{kind}.tif"))   # TODOS los mapas, no solo los de esta corrida
+            fs = sorted(str(p) for p in maps_dir.glob(f"*_{kind}.tif"))   # TODOS los mapas de esta versión
             if fs:
-                gdal.BuildVRT(str(MAPS / f"{kind}_mosaic.vrt"), fs)
-        print("mosaicos: maps/class_mosaic.vrt, maps/confidence_mosaic.vrt")
+                gdal.BuildVRT(str(maps_dir / f"{kind}_mosaic.vrt"), fs)
+        print(f"mosaicos: {maps_dir.name}/class_mosaic.vrt, {maps_dir.name}/confidence_mosaic.vrt")
     except Exception as e:
         print(f"[aviso] no se armó el VRT ({e}); carga los _class.tif directamente")
 
-    print(f"\n{done} tiles -> {MAPS}/  (abre maps/class_mosaic.vrt en QGIS)")
+    print(f"\n{done} tiles -> {maps_dir}/  (abre {maps_dir.name}/class_mosaic.vrt en QGIS)")
     if locked:
         print(f"\n[!] {len(locked)} tile(s) BLOQUEADOS (quedaron con la versión vieja): "
               f"{' '.join(locked)}")
         print("    Cierra/quita esas capas en QGIS y rehazlos (sin --skip-existing porque el "
               "archivo viejo existe):")
-        print(f"    run_producer.bat infer.py --tiles {' '.join(locked)}")
+        vflag = f" --version {args.version}" if args.version else ""
+        print(f"    run_producer.bat infer.py{vflag} --tiles {' '.join(locked)}")
 
 
 if __name__ == "__main__":
