@@ -33,10 +33,16 @@ except (IndexError, ValueError):
 # Primer año con datos consistentes para las series casi-en-tiempo-real.
 NRT_START_YEAR = 2015
 
-# ── Capas LULC COBIOCOM (clasificación propia Jalisco 2025) ──────────────────
-# Asset de la clasificación (1 banda uint8 = class_id). Cambia este path si el
-# asset se sube con otro nombre/versión.
-LULC_ASSET = "projects/lulcc-traceability-mx40/assets/cobiocom/jalisco/jalisco_lulc_2025_class"
+# ── Capas LULC COBIOCOM (clasificación propia, modelo RF v6 2025) ────────────
+# Un asset por estado (1 banda uint8 = class_id). La app mosaica los que EXISTAN,
+# así que agregar un estado = subir su COG a este id (y añadirlo aquí). Reemplazar
+# un estado por una versión nueva del modelo = volver a subir su COG al MISMO id.
+LULC_ASSETS = {
+    "Jalisco":   "projects/lulcc-traceability-mx40/assets/cobiocom/jalisco/jalisco_lulc_2025_class",
+    "Michoacán": "projects/lulcc-traceability-mx40/assets/cobiocom/michoacan/michoacan_lulc_2025_class",
+}
+# Alias de compatibilidad (referencias que esperaban un solo asset).
+LULC_ASSET = LULC_ASSETS["Jalisco"]
 # (class_id, nombre) en el mismo orden que la paleta de colores.
 LULC_CLASSES = [
     (1,  "Bosque templado"),
@@ -362,13 +368,37 @@ def analyze_modis_burn(polygon):
         return {"burn_area_ha": 0, "by_year": [], "burn_image": None, "note": str(e)}
 
 
+@st.cache_resource(show_spinner=False)
+def _lulc_image():
+    """Mosaico de las clasificaciones LULC disponibles (Jalisco + Michoacán, mismo
+    esquema de clases). Robusto a assets aún no subidos: incluye solo los que
+    existan, así la app no se rompe si falta un estado. Devuelve None si no hay
+    ninguno (y no cachea ese estado vacío, para reintentar tras subir el asset)."""
+    imgs = []
+    for aid in LULC_ASSETS.values():
+        try:
+            ee.data.getAsset(aid)          # existe + hay permiso de lectura
+            imgs.append(ee.Image(aid))
+        except Exception:
+            pass                            # asset aún no subido -> se omite
+    if not imgs:
+        _lulc_image.clear()
+        return None
+    return ee.ImageCollection(imgs).mosaic()
+
+
 def analyze_lulc(polygon):
     """Clasificación LULC COBIOCOM: área por clase dentro del polígono (en una
     sola consulta con reductor agrupado) + imágenes para el mapa: clasificación
-    completa, aguacate y agave por separado (sobreponibles)."""
+    completa, aguacate y agave por separado (sobreponibles). Cubre todos los
+    estados con asset disponible (Jalisco + Michoacán)."""
     ee_geom = polygon_to_ee(polygon)
     try:
-        img = ee.Image(LULC_ASSET)
+        img = _lulc_image()
+        if img is None:
+            return {"aguacate_ha": 0, "agave_ha": 0, "by_class": [],
+                    "class_image": None, "aguacate_image": None, "agave_image": None,
+                    "note": "Sin assets LULC disponibles en GEE (¿aún no subidos?)."}
         area_img = ee.Image.pixelArea().divide(10000)
         # Área por clase en UNA sola llamada: suma del área agrupada por class_id.
         grouped = area_img.addBands(img).reduceRegion(
@@ -411,7 +441,10 @@ def get_lulc_tile_urls():
     y agave. El asset es estático → se cachea 1 h. Si falla (asset no subido o
     GEE sin iniciar) devuelve None y no cachea el fallo."""
     try:
-        img = ee.Image(LULC_ASSET)
+        img = _lulc_image()
+        if img is None:
+            get_lulc_tile_urls.clear()
+            return {"class": None, "aguacate": None, "agave": None}
         class_img = img.remap(LULC_IDS, list(range(len(LULC_IDS))))
         urls = {
             "class":    get_tile_url(class_img,

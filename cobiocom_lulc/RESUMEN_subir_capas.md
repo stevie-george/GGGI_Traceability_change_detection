@@ -34,6 +34,16 @@ La leyenda/paleta (§2, §5) NO cambió (mismas 10 clases agrupadas, mismos clas
 Mismos comandos de subida (cambiando el nombre de archivo y el `--asset_id` a `.../cobiocom/michoacan_lulc_2025_{class,conf}`).
 ⚠️ Michoacán es **transferencia** del modelo entrenado en Jalisco (sin referencia de campo propia aún); la capa de confianza sirve para filtrar. El % "agua" incluye el océano Pacífico (tiles costeros).
 
+**App Streamlit YA cableada (2026-11-13):** `modules/gee_analysis.py` define `LULC_ASSETS`
+(un id por estado) y `_lulc_image()` que **mosaica los assets que existan** (robusto a que un
+estado aún no esté subido). Para que la app los muestre basta con INGESTAR los COGs a estos ids:
+- Jalisco:   `projects/lulcc-traceability-mx40/assets/cobiocom/jalisco/jalisco_lulc_2025_class` (reemplazar = subir v6 al MISMO id → no requiere redeploy)
+- Michoacán: `projects/lulcc-traceability-mx40/assets/cobiocom/michoacan/michoacan_lulc_2025_class` (nuevo; crear la carpeta `cobiocom/michoacan`)
+
+⚠️ GOTCHA de ingesta (categórico): **`--pyramiding_policy=mode`** (el default `mean` corrompe los
+`class_id` en los overviews) y **`--nodata_value=0`**. La app solo usa la capa de **clase**
+(la de confianza no se referencia). Opción sin bucket: Code Editor → Assets → New → Image upload (GeoTIFF).
+
 Lo de abajo (§1–§6) es el contexto original v1; sigue válido salvo el nombre del modelo/archivo.
 
 ---

@@ -168,7 +168,7 @@ def create_alert_map(polygon, results=None, center=None):
         </div>
         <div style="color:#fff; font-weight:bold; font-size:12px; margin-top:8px;
                     border-top:1px solid rgba(255,255,255,0.2); padding-top:4px;">
-            Clasificación LULC (Jalisco 2025)</div>
+            Clasificación LULC (Jalisco + Michoacán 2025)</div>
         <div style="color:#fff;">{lulc_rows}</div>
     </div>
     """

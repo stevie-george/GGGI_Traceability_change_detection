@@ -54,9 +54,9 @@ with st.sidebar:
     use_amazon = st.checkbox("JRC Amazon (regrowth 2023)", value=False)
 
     st.subheader("Clasificación RandomForest")
-    use_lulc   = st.checkbox("COBIOCOM LULC — Jalisco 2025", value=True,
-                             help="Clasificación de uso/cobertura (incluye aguacate y agave). "
-                                  "Solo tiene datos dentro de Jalisco.")
+    use_lulc   = st.checkbox("COBIOCOM LULC — Jalisco + Michoacán 2025", value=True,
+                             help="Clasificación de uso/cobertura (modelo RF v6; incluye aguacate "
+                                  "y agave). Tiene datos dentro de Jalisco y Michoacán.")
 
     st.divider()
     gee_ok = initialize_gee()
@@ -198,7 +198,7 @@ with tab2:
 
         # Fila 4 — Clasificación COBIOCOM LULC (aguacate / agave + por clase)
         if lulc:
-            st.markdown("**🗺️ Clasificación COBIOCOM LULC (Jalisco 2025)**")
+            st.markdown("**🗺️ Clasificación COBIOCOM LULC (Jalisco + Michoacán 2025)**")
             area_poly = results.get("area_ha", 0) or 0
             agu = lulc.get("aguacate_ha", 0) or 0
             agv = lulc.get("agave_ha", 0) or 0
