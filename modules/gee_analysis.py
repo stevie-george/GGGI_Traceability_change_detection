@@ -1,3 +1,5 @@
+# deploy-rev 2026-11-18b — fuerza re-sync del módulo en Streamlit Cloud
+# (incluye analyze_defor_lulc; un deploy a medias dejó este archivo viejo).
 import ee
 import geopandas as gpd
 from shapely.geometry import mapping
