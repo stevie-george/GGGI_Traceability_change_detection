@@ -61,6 +61,29 @@ Completa el flujo en el navegador **con `traceability.associate@gmail.com`**. Es
 > *usar* el proyecto: agrégala en **IAM** con el rol **Service Usage Consumer** (o **Editor**) sobre
 > `lulcc-traceability-mx40`, y asegúrate de que esté registrada en Earth Engine.
 
+### Gotcha en Windows: `earthengine authenticate` falla con error de SSL
+
+En esta máquina (Windows + Python de Anaconda), `earthengine authenticate` **completa el navegador
+pero NO guarda el token** y revienta en la terminal con:
+
+```
+ssl.SSLError: [ASN1: NOT_ENOUGH_DATA] not enough data (_ssl.c:4035)   # en _load_windows_store_certs
+```
+
+Es un bug conocido de Python: al canjear el código OAuth por el token, `urllib` lee el **almacén de
+certificados de Windows**, que tiene un certificado corrupto, y falla ahí. Síntoma: el archivo
+`~/.config/earthengine/credentials` **no cambia de fecha** aunque el navegador diga "authorization successful".
+
+**Fix (usar el bundle de `certifi` en vez del store de Windows):** corre el helper del repo
+
+```bash
+python ee_auth.py
+```
+
+Hace el `ee.Authenticate(force=True)` apuntando `ssl._create_default_https_context` a `certifi`, así el
+canje del token no toca el almacén de Windows. Inicia sesión con `traceability.associate@gmail.com`;
+debe terminar con `OK: credenciales guardadas en …` y ya con fecha de hoy.
+
 ---
 
 ## 4. Roles que necesita el SA
