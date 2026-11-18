@@ -116,9 +116,10 @@ def make_comparative_section(story, heading_style, section_title,
 
 
 def generate_pdf(polygon_area_ha, hansen, glad, jrc, polygon_wkt,
-                 modis=None, lulc=None):
+                 modis=None, lulc=None, defor_lulc=None):
     modis = modis or {}
     lulc = lulc or {}
+    defor_lulc = defor_lulc or {}
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter,
                             rightMargin=0.75*inch, leftMargin=0.75*inch,
@@ -156,6 +157,9 @@ def generate_pdf(polygon_area_ha, hansen, glad, jrc, polygon_wkt,
     if lulc.get("by_class"):
         sr.append(["COBIOCOM", "Aguacate (clasificación)", f"{lulc.get('aguacate_ha',0):,.4f}"])
         sr.append(["COBIOCOM", "Agave (clasificación)",    f"{lulc.get('agave_ha',0):,.4f}"])
+    if defor_lulc.get("by_class"):
+        sr.append(["Hansen×LULC", "Deforestación neta (excl. agrícola/urbano)",
+                   f"{defor_lulc.get('net_ha',0):,.4f}"])
     sr.append(["Hansen", "% área afectada", f"{pct:.2f}%"])
     story.append(styled_table(sr, [1.3*inch, 2.7*inch, 2*inch]))
     story.append(Spacer(1, 0.2*inch))
@@ -215,7 +219,7 @@ def generate_pdf(polygon_area_ha, hansen, glad, jrc, polygon_wkt,
     # ── 6. Clasificación COBIOCOM LULC (si cae dentro del área) ───────
     lulc_rows = [c for c in lulc.get("by_class", []) if c.get("area_ha", 0) > 0]
     if lulc_rows:
-        story.append(Paragraph("6. Clasificación COBIOCOM LULC (Jalisco 2025)", heading_style))
+        story.append(Paragraph("6. Clasificación COBIOCOM LULC (RF v6, 2025)", heading_style))
         tbl = [["Clase", "Área (ha)", "% del polígono"]]
         for c in lulc_rows:
             pctc = round(c["area_ha"] / polygon_area_ha * 100, 2) if polygon_area_ha else 0
@@ -223,8 +227,35 @@ def generate_pdf(polygon_area_ha, hansen, glad, jrc, polygon_wkt,
         story.append(styled_table(tbl, [2.7*inch, 1.8*inch, 1.5*inch]))
         story.append(Spacer(1, 0.2*inch))
 
-    # ── 7. Geometría ─────────────────────────────────────────────────
-    story.append(Paragraph("7. Geometría del polígono (WKT)", heading_style))
+    # ── 7. Deforestación por clase de cobertura (intersección) ────────
+    dfx_rows = sorted([c for c in defor_lulc.get("by_class", []) if c.get("area_ha", 0) > 0],
+                      key=lambda c: -c["area_ha"])
+    if dfx_rows:
+        total = defor_lulc.get("total_ha", 0) or 0
+        excl_ids = defor_lulc.get("exclude_ids", [])
+        story.append(Paragraph("7. Deforestación por clase de cobertura (LULC)", heading_style))
+        tbl = [["Clase", "Deforestación (ha)", "% de la pérdida", "Excluida"]]
+        for c in dfx_rows:
+            pctl = round(c["area_ha"] / total * 100, 1) if total else 0
+            tbl.append([c["name"], f"{c['area_ha']:,.4f}", f"{pctl:.1f}%",
+                        "sí" if c["class_id"] in excl_ids else "—"])
+        story.append(styled_table(tbl, [2.3*inch, 1.6*inch, 1.3*inch, 0.8*inch]))
+        story.append(Spacer(1, 0.08*inch))
+        story.append(Paragraph(
+            f"<font size=8>Total sobre área clasificada: {total:,.4f} ha &nbsp;|&nbsp; "
+            f"excluida agrícola/urbano ({', '.join(defor_lulc.get('exclude_names', []))}): "
+            f"{defor_lulc.get('excluded_ha', 0):,.4f} ha &nbsp;|&nbsp; "
+            f"<b>deforestación neta: {defor_lulc.get('net_ha', 0):,.4f} ha</b></font>",
+            styles["Normal"]))
+        story.append(Spacer(1, 0.1*inch))
+        buf = make_bar_chart("Deforestación por clase de cobertura (ha)",
+                             [c["name"] for c in dfx_rows],
+                             [c["area_ha"] for c in dfx_rows], "#c0392b")
+        story.append(Image(buf, width=5.5*inch, height=2.6*inch))
+        story.append(Spacer(1, 0.2*inch))
+
+    # ── 8. Geometría ─────────────────────────────────────────────────
+    story.append(Paragraph("8. Geometría del polígono (WKT)", heading_style))
     story.append(Paragraph(
         f"<font size=7>{polygon_wkt[:600]}...</font>", styles["Normal"]))
 
@@ -233,9 +264,11 @@ def generate_pdf(polygon_area_ha, hansen, glad, jrc, polygon_wkt,
     return buffer
 
 
-def generate_excel(polygon_area_ha, hansen, glad, jrc, modis=None, lulc=None):
+def generate_excel(polygon_area_ha, hansen, glad, jrc, modis=None, lulc=None,
+                   defor_lulc=None):
     modis = modis or {}
     lulc = lulc or {}
+    defor_lulc = defor_lulc or {}
     buffer = io.BytesIO()
 
     with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
@@ -256,6 +289,10 @@ def generate_excel(polygon_area_ha, hansen, glad, jrc, modis=None, lulc=None):
         if lulc.get("by_class"):
             resumen["Aguacate COBIOCOM (ha)"] = lulc.get("aguacate_ha", 0)
             resumen["Agave COBIOCOM (ha)"]    = lulc.get("agave_ha", 0)
+        if defor_lulc.get("by_class"):
+            resumen["Deforestación clasificada (ha)"]       = defor_lulc.get("total_ha", 0)
+            resumen["Deforestación excl. agrícola/urbano (ha)"] = defor_lulc.get("excluded_ha", 0)
+            resumen["Deforestación NETA (ha)"]              = defor_lulc.get("net_ha", 0)
         pd.DataFrame([resumen]).to_excel(writer, sheet_name="Resumen", index=False)
 
         # Clasificación COBIOCOM LULC (clases dentro del área)
@@ -266,6 +303,19 @@ def generate_excel(polygon_area_ha, hansen, glad, jrc, modis=None, lulc=None):
                 "Área (ha)": round(c["area_ha"], 4),
                 "% polígono": round(c["area_ha"] / polygon_area_ha * 100, 2) if polygon_area_ha else 0,
             } for c in lulc_rows]).to_excel(writer, sheet_name="COBIOCOM LULC", index=False)
+
+        # Deforestación x LULC (intersección por clase)
+        dfx_rows = [c for c in defor_lulc.get("by_class", []) if c.get("area_ha", 0) > 0]
+        if dfx_rows:
+            total = defor_lulc.get("total_ha", 0) or 0
+            excl_ids = defor_lulc.get("exclude_ids", [])
+            pd.DataFrame([{
+                "Clase": c["name"],
+                "Deforestación (ha)": round(c["area_ha"], 4),
+                "% de la pérdida": round(c["area_ha"] / total * 100, 2) if total else 0,
+                "Excluida (agrícola/urbano)": "sí" if c["class_id"] in excl_ids else "no",
+            } for c in sorted(dfx_rows, key=lambda c: -c["area_ha"])]).to_excel(
+                writer, sheet_name="Deforestación x LULC", index=False)
 
         # Comparativa deforestación
         defor_ds = {

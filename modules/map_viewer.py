@@ -20,6 +20,7 @@ HANSEN_YEAR_PALETTE = ["4575b4", "74add1", "abd9e9", "e0f3f8", "fee090",
 
 LAYER_STYLES = {
     "hansen":     {"color": "#ff4d4d", "name": "Hansen — Pérdida forestal"},
+    "defor_net":  {"color": "#00e5ff", "name": "Deforestación neta (excl. agrícola/urbano)"},
     "glad":       {"color": "#ff9933", "name": "GLAD — Alertas"},
     "jrc_defor":  {"color": "#cc66ff", "name": "JRC — Deforestación"},
     "jrc_degrad": {"color": "#ff6600", "name": "JRC — Degradación"},
@@ -87,6 +88,7 @@ def create_alert_map(polygon, results=None, center=None):
         jrc    = results.get("jrc", {})
         modis  = results.get("modis", {})
         lulc   = results.get("lulc", {})
+        defor  = results.get("defor_lulc", {})
 
         # Encendidas por defecto: Hansen y JRC. Las demás quedan en el control
         # de capas, apagadas.
@@ -95,6 +97,14 @@ def create_alert_map(polygon, results=None, center=None):
                 {"min": 1, "max": max(HANSEN_YEAR - 2000, 2), "palette": HANSEN_YEAR_PALETTE})
             add_tile_layer(m, tile_url, LAYER_STYLES["hansen"]["name"],
                            LAYER_STYLES["hansen"]["color"], show=True)
+
+        # Deforestación NETA: pérdida fuera de clases agrícolas/urbanas (un color
+        # sólido para distinguirla de la rampa por año de Hansen).
+        if defor.get("net_image"):
+            tile_url = get_tile_url(defor["net_image"],
+                {"min": 1, "max": max(HANSEN_YEAR - 2000, 2), "palette": ["00e5ff"]})
+            add_tile_layer(m, tile_url, LAYER_STYLES["defor_net"]["name"],
+                           LAYER_STYLES["defor_net"]["color"], show=False)
 
         if glad.get("alert_image"):
             tile_url = get_tile_url(glad["alert_image"],
@@ -161,6 +171,7 @@ def create_alert_map(polygon, results=None, center=None):
             Hansen — pérdida por año:
             <span style="color:#4575b4;">■</span><span style="color:#fee090;">■</span><span style="color:#d73027;">■</span><span style="color:#a50026;">■</span>
             <span style="font-size:10px; color:#cfd8cf;">(antiguo→reciente)</span><br>
+            <span style="color:#00e5ff; font-size:16px;">■</span>&nbsp; Deforestación neta (excl. agrícola/urbano)<br>
             <span style="color:#ff9933; font-size:16px;">■</span>&nbsp; GLAD — alertas<br>
             <span style="color:#cc66ff; font-size:16px;">■</span>&nbsp; JRC — deforestación<br>
             <span style="color:#ff6600; font-size:16px;">■</span>&nbsp; JRC — degradación<br>

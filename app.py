@@ -8,7 +8,8 @@ from modules.polygon_input import get_polygon_from_draw, get_polygon_from_file, 
 from modules.gee_analysis import (initialize_gee, analyze_hansen, analyze_glad,
                                    analyze_jrc_deforestation,
                                    analyze_modis_burn, analyze_jrc_amazon,
-                                   analyze_lulc,
+                                   analyze_lulc, analyze_defor_lulc,
+                                   LULC_CLASSES, LULC_PALETTE,
                                    get_polygon_area_ha, HANSEN_ASSET, JRC_TMF_YEAR)
 from modules.map_viewer import create_alert_map
 from modules.report_generator import generate_pdf, generate_excel
@@ -137,8 +138,11 @@ with tab1:
                 progress.progress(92, text="Consultando JRC Amazon...")
                 results["amazon"] = analyze_jrc_amazon(polygon)
             if use_lulc:
-                progress.progress(96, text="Consultando clasificación COBIOCOM LULC...")
+                progress.progress(94, text="Consultando clasificación COBIOCOM LULC...")
                 results["lulc"] = analyze_lulc(polygon)
+                progress.progress(98, text="Cruzando deforestación × cobertura LULC...")
+                results["defor_lulc"] = analyze_defor_lulc(
+                    polygon, start_year - 2000, end_year - 2000)
 
             progress.progress(100, text="¡Análisis completado!")
             st.session_state["results"] = results
@@ -164,43 +168,72 @@ with tab2:
 
         st.divider()
 
-        # ── Dashboard métricas ────────────────────────────────────────
-        st.markdown("### 📊 Resumen de alertas")
+        # ── Dashboard ─────────────────────────────────────────────────
+        st.markdown("### 📊 Resumen")
+        area_poly = results.get("area_ha", 0) or 0
+        dfx = results.get("defor_lulc", {})
+        _lulc_color = {cid: "#" + col for (cid, _), col in zip(LULC_CLASSES, LULC_PALETTE)}
 
-        # Fila 1 — Deforestación
-        st.markdown("**🌳 Cobertura forestal**")
-        col1, col2, col3, col4, col5 = st.columns(5)
-        col1.metric("Área polígono",     f"{results['area_ha']:,.2f} ha")
-        col2.metric("Hansen pérdida",    f"{hansen.get('total_loss_ha', 0):,.2f} ha",
-                    delta=f"{round(hansen.get('total_loss_ha', 0)/results['area_ha']*100, 2) if results['area_ha'] else 0}%",
-                    delta_color="inverse")
-        col3.metric("Hansen ganancia",   f"{hansen.get('gain_ha', 0):,.2f} ha",
-                    delta_color="normal")
-        col4.metric("JRC deforestación", f"{jrc.get('deforestation_ha', 0):,.2f} ha",
-                    delta_color="inverse")
-        col5.metric("JRC degradación",   f"{jrc.get('degradation_ha', 0):,.2f} ha",
-                    delta_color="inverse")
+        # A. Deforestación — indicadores clave
+        st.markdown("#### 🌳 Deforestación — indicadores clave")
+        ca, cb, cc, cd = st.columns(4)
+        ca.metric("Área del polígono", f"{area_poly:,.2f} ha")
+        _loss = hansen.get("total_loss_ha", 0) or 0
+        cb.metric("Pérdida forestal (Hansen)", f"{_loss:,.2f} ha",
+                  delta=f"{round(_loss/area_poly*100, 2) if area_poly else 0}% del área",
+                  delta_color="inverse")
+        if dfx and dfx.get("by_class") and not dfx.get("note"):
+            cc.metric("Deforestación NETA", f"{dfx.get('net_ha', 0):,.2f} ha",
+                      delta=f"−{dfx.get('excluded_ha', 0):,.2f} ha en agrícola/urbano",
+                      delta_color="inverse",
+                      help="Pérdida excluyendo: " + ", ".join(dfx.get("exclude_names", [])))
+        else:
+            cc.metric("Deforestación NETA", "—",
+                      help="Requiere la capa LULC activa y disponible en la zona")
+        cd.metric("Ganancia forestal (Hansen)", f"{hansen.get('gain_ha', 0):,.2f} ha",
+                  delta_color="normal")
 
-        # Fila 2 — Alertas e incendios
-        st.markdown("**🔥 Alertas e incendios**")
-        col6, col7, col8 = st.columns(3)
-        col6.metric("GLAD alertas",    f"{glad.get('alert_area_ha', 0):,.2f} ha",  delta_color="inverse")
-        col7.metric("MODIS quemado",   f"{modis.get('burn_area_ha', 0):,.2f} ha",  delta_color="inverse")
-        col8.metric("JRC regrowth",    f"{jrc.get('regrowth_ha', 0):,.2f} ha",     delta_color="normal")
+        # B. Deforestación × cobertura LULC (intersección)
+        if dfx and dfx.get("by_class") and not dfx.get("note"):
+            st.markdown("#### 🎯 ¿Dónde ocurre la deforestación? (× cobertura LULC)")
+            rows = sorted([c for c in dfx["by_class"] if c["area_ha"] > 0],
+                          key=lambda c: c["area_ha"])
+            if rows:
+                figd = go.Figure(go.Bar(
+                    x=[c["area_ha"] for c in rows],
+                    y=[c["name"] for c in rows],
+                    orientation="h",
+                    marker_color=[_lulc_color.get(c["class_id"], "#888888") for c in rows],
+                    text=[f"{c['area_ha']:,.2f}" for c in rows], textposition="auto",
+                ))
+                figd.update_layout(
+                    height=max(260, 34 * len(rows)), xaxis_title="Deforestación (ha)",
+                    margin=dict(l=20, r=20, t=10, b=20),
+                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="white"))
+                st.plotly_chart(figd, use_container_width=True)
+            st.caption(
+                f"Total sobre área clasificada **{dfx.get('total_ha', 0):,.2f} ha** · "
+                f"excluida agrícola/urbano ({', '.join(dfx.get('exclude_names', []))}) "
+                f"**{dfx.get('excluded_ha', 0):,.2f} ha** · "
+                f"**neta {dfx.get('net_ha', 0):,.2f} ha**")
+            with st.expander("Ver tabla · deforestación por clase"):
+                _dr = [c for c in dfx["by_class"] if c["area_ha"] > 0]
+                _tot = dfx.get("total_ha", 0) or 0
+                st.dataframe(
+                    {"Clase":              [c["name"] for c in _dr],
+                     "Deforestación (ha)": [round(c["area_ha"], 3) for c in _dr],
+                     "% de la pérdida":    [round(c["area_ha"] / _tot * 100, 1) if _tot else 0
+                                            for c in _dr],
+                     "Excluida":           ["sí" if c["class_id"] in dfx.get("exclude_ids", []) else "—"
+                                            for c in _dr]},
+                    use_container_width=True, hide_index=True)
+        elif use_lulc and dfx.get("note"):
+            st.info(f"Deforestación × LULC no disponible: {dfx['note']}")
 
-        # Fila 3 — JRC Amazon (si disponible)
-        if amazon:
-            st.markdown("**🌎 Cobertura JRC Amazon**")
-            col_a, col_b, col_c, col_d = st.columns(4)
-            col_a.metric("Bosque intacto",  f"{amazon.get('undisturbed_ha', 0):,.2f} ha")
-            col_b.metric("Degradado",       f"{amazon.get('degraded_ha', 0):,.2f} ha",    delta_color="inverse")
-            col_c.metric("Deforestado",     f"{amazon.get('deforested_ha', 0):,.2f} ha",  delta_color="inverse")
-            col_d.metric("Regeneración",    f"{amazon.get('regrowth_ha', 0):,.2f} ha",    delta_color="normal")
-
-        # Fila 4 — Clasificación COBIOCOM LULC (aguacate / agave + por clase)
+        # C. Cobertura del suelo (LULC) — áreas por clase
         if lulc:
-            st.markdown("**🗺️ Clasificación COBIOCOM LULC (RF v6, 2025)**")
-            area_poly = results.get("area_ha", 0) or 0
+            st.markdown("#### 🗺️ Cobertura del suelo (LULC RF v6, 2025)")
             agu = lulc.get("aguacate_ha", 0) or 0
             agv = lulc.get("agave_ha", 0) or 0
             col_l1, col_l2, col_l3 = st.columns(3)
@@ -209,10 +242,9 @@ with tab2:
             col_l2.metric("🌵 Agave", f"{agv:,.2f} ha",
                           delta=f"{round(agv / area_poly * 100, 1) if area_poly else 0}% del polígono")
             col_l3.metric("Aguacate + Agave", f"{agu + agv:,.2f} ha")
-
             by_class = [c for c in lulc.get("by_class", []) if c.get("area_ha", 0) > 0]
             if by_class:
-                with st.expander("Ver desglose por clase"):
+                with st.expander("Ver áreas por clase"):
                     st.dataframe(
                         {"Clase":     [c["name"] for c in by_class],
                          "Área (ha)": [round(c["area_ha"], 2) for c in by_class],
@@ -221,6 +253,23 @@ with tab2:
                         use_container_width=True, hide_index=True)
             if lulc.get("note"):
                 st.warning(f"⚠️ COBIOCOM LULC: {lulc['note']}")
+
+        # D. Otras fuentes de alertas / degradación / fuego
+        st.markdown("#### 🔥 Otras fuentes (alertas, degradación, fuego)")
+        cols = st.columns(5)
+        cols[0].metric("JRC deforestación", f"{jrc.get('deforestation_ha', 0):,.2f} ha", delta_color="inverse")
+        cols[1].metric("JRC degradación",   f"{jrc.get('degradation_ha', 0):,.2f} ha",   delta_color="inverse")
+        cols[2].metric("GLAD alertas",      f"{glad.get('alert_area_ha', 0):,.2f} ha",   delta_color="inverse")
+        cols[3].metric("MODIS quemado",     f"{modis.get('burn_area_ha', 0):,.2f} ha",   delta_color="inverse")
+        cols[4].metric("JRC regrowth",      f"{jrc.get('regrowth_ha', 0):,.2f} ha",      delta_color="normal")
+
+        if amazon:
+            st.markdown("#### 🌎 Cobertura JRC Amazon")
+            col_a, col_b, col_c, col_d = st.columns(4)
+            col_a.metric("Bosque intacto",  f"{amazon.get('undisturbed_ha', 0):,.2f} ha")
+            col_b.metric("Degradado",       f"{amazon.get('degraded_ha', 0):,.2f} ha",    delta_color="inverse")
+            col_c.metric("Deforestado",     f"{amazon.get('deforested_ha', 0):,.2f} ha",  delta_color="inverse")
+            col_d.metric("Regeneración",    f"{amazon.get('regrowth_ha', 0):,.2f} ha",    delta_color="normal")
 
         st.divider()
 
@@ -302,16 +351,19 @@ with tab3:
         jrc     = results.get("jrc", {})
         modis   = results.get("modis", {})
         lulc    = results.get("lulc", {})
+        dfx     = results.get("defor_lulc", {})
 
         col1, col2 = st.columns(2)
         with col1:
             if st.button("📄 Generar PDF"):
-                pdf = generate_pdf(results["area_ha"], hansen, glad, jrc, polygon.wkt, modis, lulc)
+                pdf = generate_pdf(results["area_ha"], hansen, glad, jrc, polygon.wkt,
+                                   modis, lulc, defor_lulc=dfx)
                 st.download_button("⬇️ Descargar PDF", pdf,
                                    "reporte_deforestacion.pdf", "application/pdf")
         with col2:
             if st.button("📊 Generar Excel"):
-                excel = generate_excel(results["area_ha"], hansen, glad, jrc, modis, lulc)
+                excel = generate_excel(results["area_ha"], hansen, glad, jrc, modis, lulc,
+                                       defor_lulc=dfx)
                 st.download_button("⬇️ Descargar Excel", excel,
                                    "reporte_deforestacion.xlsx",
                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

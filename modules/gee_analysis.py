@@ -68,6 +68,10 @@ LULC_PALETTE = ["1b5e20", "7cb342", "c0ca33", "dce775", "004d40",
 LULC_AGUACATE_ID = 5
 LULC_AGAVE_ID = 6
 LULC_SCALE = 10  # resolución nativa en metros
+# Clases que se EXCLUYEN de la "deforestación neta": agrícolas y urbanas. La
+# pérdida ahí no es tala de bosque sino ruido/reclasificación sobre suelo que ya
+# no era forestal. Aguacate(5)/Agave(6) NO se excluyen: ahí sí interesa la pérdida.
+LULC_EXCLUDE_DEFOR_IDS = [8, 10, 13]   # Ag. protegida, Urbano, Agricultura
 
 def current_year():
     """Año actual, calculado en cada ejecución (no fijado a mano)."""
@@ -449,6 +453,52 @@ def analyze_lulc(polygon):
         return {"aguacate_ha": 0, "agave_ha": 0, "by_class": [],
                 "class_image": None, "aguacate_image": None,
                 "agave_image": None, "note": str(e)}
+
+
+def analyze_defor_lulc(polygon, start_year=1, end_year=25, exclude_ids=None):
+    """Intersección deforestación × clasificación LULC, en una sola consulta.
+
+    Usa la pérdida de Hansen (lossyear) dentro de la ventana [start_year, end_year]
+    (formato Hansen: 1..25 = 2001..2025) y la agrupa por clase LULC. Devuelve:
+      - by_class: área de pérdida por clase (¿cuánta en bosque/aguacate/agave/agricultura…?)
+      - total_ha: pérdida total sobre área CLASIFICADA
+      - excluded_ha: pérdida en clases agrícolas/urbanas (exclude_ids)
+      - net_ha: deforestación NETA = total - excluida
+      - net_image: la pérdida fuera de esas clases (para el mapa)
+    """
+    if exclude_ids is None:
+        exclude_ids = LULC_EXCLUDE_DEFOR_IDS
+    ee_geom = polygon_to_ee(polygon)
+    excl_names = [name for cid, name in LULC_CLASSES if cid in exclude_ids]
+    empty = {"by_class": [], "total_ha": 0.0, "excluded_ha": 0.0, "net_ha": 0.0,
+             "net_image": None, "exclude_ids": list(exclude_ids), "exclude_names": excl_names}
+    try:
+        lulc = _lulc_image()
+        if lulc is None:
+            return {**empty, "note": "Sin capa LULC disponible para intersectar."}
+        loss_year = ee.Image(HANSEN_ASSET).select("lossyear")
+        loss_mask = loss_year.gte(start_year).And(loss_year.lte(end_year))
+        area_img = ee.Image.pixelArea().divide(10000)
+        # suma del área de pérdida AGRUPADA por class_id (banda 1 = lulc)
+        grouped = area_img.updateMask(loss_mask).addBands(lulc).reduceRegion(
+            reducer=ee.Reducer.sum().group(groupField=1, groupName="class"),
+            geometry=ee_geom, scale=30, maxPixels=1e13, bestEffort=True
+        ).getInfo()
+        areas = {int(g["class"]): round(g.get("sum", 0) or 0, 4)
+                 for g in grouped.get("groups", [])}
+        by_class = [{"class_id": cid, "name": name, "area_ha": areas.get(cid, 0.0)}
+                    for cid, name in LULC_CLASSES]
+        total = round(sum(areas.values()), 4)
+        excluded = round(sum(areas.get(c, 0.0) for c in exclude_ids), 4)
+        net = round(max(total - excluded, 0.0), 4)
+        # imagen para el mapa: pérdida SOLO fuera de agrícola/urbano (keep==1)
+        keep = lulc.remap(list(exclude_ids), [0] * len(exclude_ids), 1)
+        net_image = loss_year.updateMask(loss_mask).updateMask(keep)
+        return {"by_class": by_class, "total_ha": total, "excluded_ha": excluded,
+                "net_ha": net, "net_image": net_image,
+                "exclude_ids": list(exclude_ids), "exclude_names": excl_names}
+    except Exception as e:
+        return {**empty, "note": str(e)}
 
 
 def get_tile_url(image, vis_params):
