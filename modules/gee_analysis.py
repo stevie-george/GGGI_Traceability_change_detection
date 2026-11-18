@@ -66,7 +66,9 @@ LULC_CLASSES = [
 ]
 LULC_IDS = [cid for cid, _ in LULC_CLASSES]
 LULC_PALETTE = ["1b5e20", "7cb342", "c0ca33", "dce775", "004d40",
-                "8e24aa", "e0e0e0", "b71c1c", "1565c0", "ffd54f"]
+                "8e24aa", "e0e0e0", "757575", "1565c0", "ffd54f"]
+#   Urbano (idx 7) = gris "757575" (antes rojo "b71c1c"): el rojo se reserva para
+#   la deforestación, para poder superponerla sobre la cobertura sin confusión.
 LULC_AGUACATE_ID = 5
 LULC_AGAVE_ID = 6
 LULC_SCALE = 10  # resolución nativa en metros
@@ -74,6 +76,10 @@ LULC_SCALE = 10  # resolución nativa en metros
 # pérdida ahí no es tala de bosque sino ruido/reclasificación sobre suelo que ya
 # no era forestal. Aguacate(5)/Agave(6) NO se excluyen: ahí sí interesa la pérdida.
 LULC_EXCLUDE_DEFOR_IDS = [8, 10, 13]   # Ag. protegida, Urbano, Agricultura
+# Rampa temporal para la pérdida por año (igual que el mapa de la app): años
+# antiguos en frío (azul) -> recientes en cálido (rojo).
+HANSEN_YEAR_PALETTE = ["4575b4", "74add1", "abd9e9", "e0f3f8", "fee090",
+                       "fdae61", "f46d43", "d73027", "a50026"]
 
 def current_year():
     """Año actual, calculado en cada ejecución (no fijado a mano)."""
@@ -501,6 +507,94 @@ def analyze_defor_lulc(polygon, start_year=1, end_year=25, exclude_ids=None):
                 "exclude_ids": list(exclude_ids), "exclude_names": excl_names}
     except Exception as e:
         return {**empty, "note": str(e)}
+
+
+def report_map_png(polygon, start_year=1, end_year=25, dim=640):
+    """PNG (bytes) de 2 paneles para el reporte, con el polígono dibujado:
+       a) Clasificación LULC (paleta de clases)
+       b) Deforestación por AÑO (Hansen, rampa temporal) sobre satélite S2
+    Devuelve None si algo falla (el reporte sigue sin el mapa). start/end en
+    formato Hansen (1..25 = 2001..2025)."""
+    try:
+        import io as _io
+        import urllib.request
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import LinearSegmentedColormap, Normalize
+        from matplotlib.cm import ScalarMappable
+
+        ee_geom = polygon_to_ee(polygon)
+        fc = ee.FeatureCollection([ee.Feature(ee_geom)])
+        minx, miny, maxx, maxy = polygon.bounds
+        bx = (maxx - minx) * 0.08 or 0.01
+        by = (maxy - miny) * 0.08 or 0.01
+        region = ee.Geometry.Rectangle([minx - bx, miny - by, maxx + bx, maxy + by])
+        outline = ee.Image().byte().paint(fc, 1, 3).selfMask()
+
+        # Base satelital Sentinel-2 (mediana reciente, sin nubes); fallback gris
+        try:
+            base = (ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
+                    .filterBounds(region).filterDate("2024-01-01", "2026-01-01")
+                    .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 40)).median()
+                    .visualize(bands=["B4", "B3", "B2"], min=200, max=3000))
+        except Exception:
+            base = ee.Image.constant(90).visualize(min=0, max=255)
+
+        # Panel a) LULC
+        lulc = _lulc_image()
+        if lulc is not None:
+            lulc_vis = lulc.remap(LULC_IDS, list(range(len(LULC_IDS)))).visualize(
+                min=0, max=len(LULC_IDS) - 1, palette=LULC_PALETTE)
+        else:
+            lulc_vis = base
+        panel_a = lulc_vis.blend(outline.visualize(min=0, max=1, palette=["ffffff"]))
+
+        # Panel b) deforestación por año sobre satélite
+        loss_year = ee.Image(HANSEN_ASSET).select("lossyear")
+        lm = loss_year.gte(start_year).And(loss_year.lte(end_year))
+        ymax = max(end_year, start_year + 1)
+        loss_vis = loss_year.updateMask(lm).visualize(
+            min=start_year, max=ymax, palette=HANSEN_YEAR_PALETTE)
+        panel_b = base.blend(loss_vis).blend(
+            outline.visualize(min=0, max=1, palette=["00e5ff"]))
+
+        # Panel c) SUPERPUESTO: deforestación (rojo sólido) sobre la clasificación
+        # -> se ve en qué clase cae cada pérdida.
+        loss_red = loss_year.updateMask(lm).visualize(min=start_year, max=ymax,
+                                                      palette=["ff1744"])
+        panel_c = lulc_vis.blend(loss_red).blend(
+            outline.visualize(min=0, max=1, palette=["00e5ff"]))
+
+        def thumb(img):
+            url = img.getThumbURL({"region": region, "dimensions": dim, "format": "png"})
+            with urllib.request.urlopen(url, timeout=90) as r:
+                return plt.imread(_io.BytesIO(r.read()))
+
+        imgs = [thumb(panel_a), thumb(panel_b), thumb(panel_c)]
+        titles = ["a) Clasificación LULC (RF v6)",
+                  "b) Deforestación por año (Hansen)",
+                  "c) Deforestación sobre cobertura"]
+        fig, axs = plt.subplots(1, 3, figsize=(10.6, 3.5))
+        for ax, im, t in zip(axs, imgs, titles):
+            ax.imshow(im); ax.set_title(t, fontsize=9, loc="left")
+            ax.set_xticks([]); ax.set_yticks([])
+            for s in ax.spines.values():
+                s.set_edgecolor("#888888"); s.set_linewidth(0.6)
+        cmap = LinearSegmentedColormap.from_list("yr", ["#" + c for c in HANSEN_YEAR_PALETTE])
+        sm = ScalarMappable(norm=Normalize(2000 + start_year, 2000 + ymax), cmap=cmap)
+        sm.set_array([])
+        cb = fig.colorbar(sm, ax=axs[1], fraction=0.05, pad=0.03, orientation="horizontal")
+        cb.ax.tick_params(labelsize=6.5); cb.set_label("Año de pérdida", fontsize=7)
+        axs[2].text(0.5, -0.045, "rojo = deforestación", transform=axs[2].transAxes,
+                    ha="center", va="top", fontsize=7, color="#c00000")
+        fig.tight_layout()
+        buf = _io.BytesIO()
+        fig.savefig(buf, format="png", dpi=185, bbox_inches="tight", facecolor="white")
+        plt.close(fig); buf.seek(0)
+        return buf.getvalue()
+    except Exception:
+        return None
 
 
 def get_tile_url(image, vis_params):

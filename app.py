@@ -1,4 +1,5 @@
 import datetime
+import re
 import streamlit as st
 from streamlit_folium import st_folium
 import pandas as pd
@@ -8,9 +9,12 @@ from modules.polygon_input import get_polygon_from_draw, get_polygon_from_file, 
 from modules.gee_analysis import (initialize_gee, analyze_hansen, analyze_glad,
                                    analyze_jrc_deforestation,
                                    analyze_modis_burn, analyze_jrc_amazon,
-                                   analyze_lulc, analyze_defor_lulc,
+                                   analyze_lulc, analyze_defor_lulc, report_map_png,
                                    LULC_CLASSES, LULC_PALETTE,
                                    get_polygon_area_ha, HANSEN_ASSET, JRC_TMF_YEAR)
+
+# color (#hex) por class_id, desde la paleta oficial (para barras del dashboard)
+LULC_COLOR = {cid: "#" + col for (cid, _), col in zip(LULC_CLASSES, LULC_PALETTE)}
 from modules.map_viewer import create_alert_map
 from modules.report_generator import generate_pdf, generate_excel
 
@@ -114,12 +118,23 @@ with tab1:
     if "polygon" in st.session_state:
         st.divider()
         area = get_polygon_area_ha(st.session_state["polygon"])
-        st.metric("Área", f"{area:,.2f} ha")
+        cn, ca = st.columns([2, 1])
+        analysis_name = cn.text_input(
+            "Nombre del análisis", value=st.session_state.get("analysis_name_val", ""),
+            placeholder="Ej. Predio San José — 2025", key="analysis_name_in",
+            help="Identifica este análisis; aparece en el dashboard y en los reportes (PDF/Excel).")
+        ca.metric("Área", f"{area:,.2f} ha")
         analizar = st.button("🔍 Analizar deforestación", type="primary", key="btn_analizar")
 
         if analizar:
+            st.session_state["analysis_name_val"] = analysis_name
             polygon = st.session_state["polygon"]
-            results = {"area_ha": area}
+            sources = [n for n, on in [("Hansen", use_hansen), ("GLAD", use_glad),
+                                       ("JRC", use_jrc), ("MODIS", use_modis),
+                                       ("COBIOCOM LULC", use_lulc)] if on]
+            results = {"area_ha": area, "analysis_name": analysis_name,
+                       "period": f"{start_year}–{end_year}",
+                       "start_year": start_year, "end_year": end_year, "sources": sources}
             progress = st.progress(0, text="Iniciando análisis...")
 
             if use_hansen:
@@ -169,7 +184,8 @@ with tab2:
         st.divider()
 
         # ── Dashboard ─────────────────────────────────────────────────
-        st.markdown("### 📊 Resumen")
+        _nm = results.get("analysis_name")
+        st.markdown("### 📊 Resumen" + (f" — {_nm}" if _nm else ""))
         area_poly = results.get("area_ha", 0) or 0
         dfx = results.get("defor_lulc", {})
         _lulc_color = {cid: "#" + col for (cid, _), col in zip(LULC_CLASSES, LULC_PALETTE)}
@@ -244,7 +260,20 @@ with tab2:
             col_l3.metric("Aguacate + Agave", f"{agu + agv:,.2f} ha")
             by_class = [c for c in lulc.get("by_class", []) if c.get("area_ha", 0) > 0]
             if by_class:
-                with st.expander("Ver áreas por clase"):
+                rows_c = sorted(by_class, key=lambda c: c["area_ha"])
+                figc = go.Figure(go.Bar(
+                    x=[c["area_ha"] for c in rows_c],
+                    y=[c["name"] for c in rows_c], orientation="h",
+                    marker_color=[LULC_COLOR.get(c["class_id"], "#888888") for c in rows_c],
+                    text=[f"{c['area_ha']:,.0f}" for c in rows_c], textposition="auto",
+                ))
+                figc.update_layout(
+                    height=max(240, 32 * len(rows_c)), xaxis_title="Área (ha)",
+                    margin=dict(l=20, r=20, t=10, b=20),
+                    plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                    font=dict(color="white"))
+                st.plotly_chart(figc, use_container_width=True)
+                with st.expander("Ver áreas por clase (tabla)"):
                     st.dataframe(
                         {"Clase":     [c["name"] for c in by_class],
                          "Área (ha)": [round(c["area_ha"], 2) for c in by_class],
@@ -353,19 +382,31 @@ with tab3:
         lulc    = results.get("lulc", {})
         dfx     = results.get("defor_lulc", {})
 
+        _name = results.get("analysis_name") or ""
+        _slug = re.sub(r"[^a-z0-9]+", "_", _name.lower()).strip("_") or "deforestacion"
+        _cent = polygon.centroid
+        meta = {"name": _name, "period": results.get("period", ""),
+                "centroid": (_cent.y, _cent.x), "sources": results.get("sources", []),
+                "model": "RF v6"}
+        _sy = results.get("start_year", start_year) - 2000
+        _ey = results.get("end_year", end_year) - 2000
+        st.caption(f"Análisis: **{_name or '(sin nombre)'}** · período {meta['period'] or '—'}")
+
         col1, col2 = st.columns(2)
         with col1:
             if st.button("📄 Generar PDF"):
-                pdf = generate_pdf(results["area_ha"], hansen, glad, jrc, polygon.wkt,
-                                   modis, lulc, defor_lulc=dfx)
+                with st.spinner("Generando mapa y reporte PDF…"):
+                    mp = report_map_png(polygon, _sy, _ey)
+                    pdf = generate_pdf(results["area_ha"], hansen, glad, jrc, polygon.wkt,
+                                       modis, lulc, defor_lulc=dfx, meta=meta, map_png=mp)
                 st.download_button("⬇️ Descargar PDF", pdf,
-                                   "reporte_deforestacion.pdf", "application/pdf")
+                                   f"reporte_{_slug}.pdf", "application/pdf")
         with col2:
             if st.button("📊 Generar Excel"):
                 excel = generate_excel(results["area_ha"], hansen, glad, jrc, modis, lulc,
-                                       defor_lulc=dfx)
+                                       defor_lulc=dfx, meta=meta)
                 st.download_button("⬇️ Descargar Excel", excel,
-                                   "reporte_deforestacion.xlsx",
+                                   f"reporte_{_slug}.xlsx",
                                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     else:
         st.info("Primero ingresa y analiza un polígono en la pestaña **Polígono**")

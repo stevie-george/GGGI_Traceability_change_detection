@@ -24,11 +24,6 @@ def get_polygon_from_draw(center=[20.0, -102.0], zoom=6):
         overlay=False, control=True, max_zoom=21
     ).add_to(m)
 
-    folium.TileLayer(
-        tiles="OpenStreetMap", name="OpenStreetMap",
-        overlay=False, control=True
-    ).add_to(m)
-
     plugins.Draw(
         export=False,
         draw_options={
