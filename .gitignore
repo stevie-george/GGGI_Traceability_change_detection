@@ -6,6 +6,17 @@ __pycache__/
 assets/tmp/
 .streamlit/secrets.toml
 
+# ---- Llaves / credenciales: NUNCA al repo (dataset_versions.json NO coincide) ----
+lulcc-traceability-mx40-*.json
+*service-account*.json
+*service_account*.json
+*-sa.json
+sa-*.json
+*gee*key*.json
+*credentials*.json
+secrets/
+*.pem
+
 # ---- COBIOCOM LULC: datos y artefactos pesados (viven en SSD/disco, no en git) ----
 # Tiles Sentinel-2 (junction al SSD), caché de escenas
 cobiocom_lulc/out/
