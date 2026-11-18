@@ -37,9 +37,15 @@ NRT_START_YEAR = 2015
 # Un asset por estado (1 banda uint8 = class_id). La app mosaica los que EXISTAN,
 # así que agregar un estado = subir su COG a este id (y añadirlo aquí). Reemplazar
 # un estado por una versión nueva del modelo = volver a subir su COG al MISMO id.
+# Carpeta raíz de los assets LULC por estado. Convención de cada capa:
+#   <folder>/<estado>/<estado>_lulc_<año>_class   (1 banda uint8 = class_id)
+# La app DESCUBRE dinámicamente los que existan bajo esta carpeta, así subir un
+# estado nuevo lo hace aparecer sin tocar código (ver _discover_lulc_ids).
+LULC_ASSET_FOLDER = f"projects/{GEE_PROJECT}/assets/cobiocom"
+# Fallback explícito por si no se puede LISTAR la carpeta (permisos/transitorio).
 LULC_ASSETS = {
-    "Jalisco":   "projects/lulcc-traceability-mx40/assets/cobiocom/jalisco/jalisco_lulc_2025_class",
-    "Michoacán": "projects/lulcc-traceability-mx40/assets/cobiocom/michoacan/michoacan_lulc_2025_class",
+    "Jalisco":   f"{LULC_ASSET_FOLDER}/jalisco/jalisco_lulc_2025_class",
+    "Michoacán": f"{LULC_ASSET_FOLDER}/michoacan/michoacan_lulc_2025_class",
 }
 # Alias de compatibilidad (referencias que esperaban un solo asset).
 LULC_ASSET = LULC_ASSETS["Jalisco"]
@@ -368,19 +374,38 @@ def analyze_modis_burn(polygon):
         return {"burn_area_ha": 0, "by_year": [], "burn_image": None, "note": str(e)}
 
 
-@st.cache_resource(show_spinner=False)
+def _discover_lulc_ids():
+    """Lista dinámicamente los assets de clasificación por estado bajo
+    LULC_ASSET_FOLDER (…/cobiocom/<estado>/<...>_class). Así, subir un estado
+    nuevo lo hace aparecer en la app SIN tocar código. Si la carpeta no se puede
+    listar (permisos/transitorio), cae al dict LULC_ASSETS."""
+    ids = []
+    try:
+        for folder in ee.data.listAssets({"parent": LULC_ASSET_FOLDER}).get("assets", []):
+            if folder.get("type") != "FOLDER":
+                continue
+            for a in ee.data.listAssets({"parent": folder["name"]}).get("assets", []):
+                if a.get("type") == "IMAGE" and a.get("id", "").endswith("_class"):
+                    ids.append(a["id"])
+    except Exception:
+        pass
+    return ids or list(LULC_ASSETS.values())
+
+
+@st.cache_resource(show_spinner=False, ttl=3600)
 def _lulc_image():
-    """Mosaico de las clasificaciones LULC disponibles (Jalisco + Michoacán, mismo
-    esquema de clases). Robusto a assets aún no subidos: incluye solo los que
-    existan, así la app no se rompe si falta un estado. Devuelve None si no hay
-    ninguno (y no cachea ese estado vacío, para reintentar tras subir el asset)."""
+    """Mosaico de TODAS las clasificaciones LULC por estado disponibles (mismo
+    esquema de clases). Descubre los estados dinámicamente (_discover_lulc_ids) y
+    es robusto a assets aún no subidos: incluye solo los legibles. Devuelve None si
+    no hay ninguno (sin cachear ese vacío). Cache de 1 h -> un estado recién subido
+    aparece en <=1 h, o de inmediato si se reinicia la app."""
     imgs = []
-    for aid in LULC_ASSETS.values():
+    for aid in _discover_lulc_ids():
         try:
-            ee.data.getAsset(aid)          # existe + hay permiso de lectura
-            imgs.append(ee.Image(aid))
+            ee.data.getAsset(aid)                       # existe + permiso de lectura
+            imgs.append(ee.Image(aid).select(0).rename("class"))  # banda homogénea p/ mosaicar
         except Exception:
-            pass                            # asset aún no subido -> se omite
+            pass                                         # asset aún no subido -> se omite
     if not imgs:
         _lulc_image.clear()
         return None
