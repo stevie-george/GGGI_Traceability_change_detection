@@ -9,6 +9,7 @@ from reportlab.lib.units import inch
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator, FuncFormatter
 from datetime import datetime
 
 from modules.gee_analysis import LULC_CLASSES, LULC_PALETTE
@@ -95,6 +96,11 @@ def fig_class_bars(lulc_rows, defor_rows, exclude_ids):
             ax.text(b.get_width() + vmax * 0.01, b.get_y() + b.get_height() / 2,
                     f"{v:,.1f}", va="center", fontsize=7, color="#222")
         ax.set_title(title, loc="left"); ax.set_xlabel(xlabel); ax.set_xlim(0, vmax * 1.16)
+        # Menos ticks + separador de miles -> no se amontonan con valores grandes
+        dec = 0 if vmax >= 50 else 1
+        ax.xaxis.set_major_locator(MaxNLocator(nbins=5))
+        ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _p, d=dec: f"{v:,.{d}f}"))
+        ax.tick_params(axis="x", labelsize=7.5)
         for s in ("top", "right"): ax.spines[s].set_visible(False)
         ax.tick_params(length=0)
 
